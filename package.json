@@ -7,7 +7,8 @@
     "dev": "node tests/serve.js",
     "check": "node tests/check-syntax.js",
     "test": "node tests/dup.js && node tests/run.js && node tests/reg.js",
-    "test:todo": "node tests/dup.js && node tests/run.js && node tests/reg.js && node tests/vt2.js && node tests/pl.js"
+    "test:todo": "node tests/dup.js && node tests/run.js && node tests/reg.js && node tests/vt2.js && node tests/pl.js",
+    "deploy": "wrangler pages deploy web --project-name=cn-desempeno --branch=main"
   },
   "devDependencies": {
     "exceljs": "4.4.0",
@@ -15,6 +16,7 @@
     "jspdf": "2.5.1",
     "playwright": "^1.48.0",
     "pptxgenjs": "3.12.0",
-    "xlsx": "0.18.5"
+    "xlsx": "0.18.5",
+    "wrangler": "^4.0.0"
   }
 }
