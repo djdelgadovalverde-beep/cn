@@ -58,18 +58,23 @@ tests/               servidor local y pruebas con Playwright
 - Fotos: bucket privado `evidencias` (JPG/PNG/WebP, 2 MB), con enlaces temporales.
 - Alta/baja de usuarios: Edge Function `admin-users` (solo administrador).
 
-## Publicar (sin gastar créditos de Netlify)
+## Publicar (Cloudflare Pages, gratis)
 
-Es un sitio estático: puedes publicarlo gratis en cualquiera de estos sitios, sin compilar.
+Sitio: **https://cn-desempeno.pages.dev** (proyecto `cn-desempeno`, creado en tu cuenta de Cloudflare).
 
-1. **GitHub Pages (recomendado):** el flujo `.github/workflows/pages.yml` publica `web/` al subir a `main`.
-   Activa **Settings → Pages → Source: GitHub Actions** una sola vez.
-2. **Cloudflare Pages:** conecta el repositorio, «Build command» vacío y «Output directory» `web`.
-3. **Netlify (solo manual):** `netlify.toml` ya evita las compilaciones automáticas. Para publicar:
-   `npx netlify-cli deploy --dir=web --prod` cuando de verdad haya una versión nueva.
+**Automático desde GitHub** (`.github/workflows/cloudflare-pages.yml`): cada `git push` a `main` que cambie algo en `web/` publica solo.
+Configúralo una sola vez:
+1. Cloudflare → *My Profile → API Tokens → Create Token* → plantilla «Edit Cloudflare Workers» o permiso personalizado
+   **Account · Cloudflare Pages · Edit**. Copia el token.
+2. GitHub → repositorio `cn` → *Settings → Secrets and variables → Actions → New repository secret*:
+   `CLOUDFLARE_API_TOKEN` (el token) y `CLOUDFLARE_ACCOUNT_ID` = `2f2b9bf5541884fa45d4f3872fe5eee1`.
 
-Si Netlify sigue enlazado al repositorio, en **Site configuration → Build & deploy → Continuous deployment** elige
-«Stop builds» para que cada `git push` no consuma créditos.
+**A mano, desde VS Code** (sin GitHub): `npx wrangler login` una vez y luego `npm run deploy`.
+
+**Alternativa sin token:** en Cloudflare → Workers & Pages → el proyecto → *Settings → Builds → Connect to Git*, elige `cn`,
+comando de compilación vacío y directorio `web`.
+
+Netlify queda sin uso: `netlify.toml` evita compilaciones automáticas.
 
 ## Flujo de trabajo recomendado
 
