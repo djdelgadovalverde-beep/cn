@@ -58,23 +58,20 @@ tests/               servidor local y pruebas con Playwright
 - Fotos: bucket privado `evidencias` (JPG/PNG/WebP, 2 MB), con enlaces temporales.
 - Alta/baja de usuarios: Edge Function `admin-users` (solo administrador).
 
-## Publicar (Cloudflare Pages, gratis)
+## Publicar (GitHub Pages, gratis)
 
-Sitio: **https://cn-desempeno.pages.dev** (proyecto `cn-desempeno`, creado en tu cuenta de Cloudflare).
+Sitio: **https://djdelgadovalverde-beep.github.io/cn/**
 
-**Automático desde GitHub** (`.github/workflows/cloudflare-pages.yml`): cada `git push` a `main` que cambie algo en `web/` publica solo.
-Configúralo una sola vez:
-1. Cloudflare → *My Profile → API Tokens → Create Token* → plantilla «Edit Cloudflare Workers» o permiso personalizado
-   **Account · Cloudflare Pages · Edit**. Copia el token.
-2. GitHub → repositorio `cn` → *Settings → Secrets and variables → Actions → New repository secret*:
-   `CLOUDFLARE_API_TOKEN` (el token) y `CLOUDFLARE_ACCOUNT_ID` = `2f2b9bf5541884fa45d4f3872fe5eee1`.
+El flujo `.github/workflows/pages.yml` publica la carpeta `web/` en cada `git push` a `main` que la modifique.
+Activación (una sola vez):
+1. Repositorio **público**: Settings → General → Danger Zone → *Change visibility → Public*
+   (en cuentas gratuitas GitHub Pages solo funciona con repositorios públicos; los datos siguen protegidos por la base de datos,
+   y en el código solo hay la clave `anon` pública de Supabase).
+2. Settings → Pages → *Build and deployment → Source: GitHub Actions*.
+3. Pestaña Actions → «Publicar en GitHub Pages» → *Run workflow* (o haz cualquier push que cambie `web/`).
 
-**A mano, desde VS Code** (sin GitHub): `npx wrangler login` una vez y luego `npm run deploy`.
-
-**Alternativa sin token:** en Cloudflare → Workers & Pages → el proyecto → *Settings → Builds → Connect to Git*, elige `cn`,
-comando de compilación vacío y directorio `web`.
-
-Netlify queda sin uso: `netlify.toml` evita compilaciones automáticas.
+Alternativas opcionales: Cloudflare Pages (`https://cn-desempeno.pages.dev`, publicación manual con `npm run deploy` o con el flujo
+manual `cloudflare-pages.yml`) y Netlify (sin uso; `netlify.toml` evita compilaciones automáticas).
 
 ## Flujo de trabajo recomendado
 
