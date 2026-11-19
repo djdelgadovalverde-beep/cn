@@ -260,10 +260,10 @@
       if (a === 'gest' || a === 'ungest') return setGest(sel, a === 'gest', '').then(() => { SEL.clear(); toast(a === 'gest' ? `${sel.length} marcados en gestión` : `${sel.length} devueltos a pendientes`); render(); }); };
   }
 
-  const api = { render: async (tp, host, o) => { if (tp) RG.tipo = tp; HOST = host; RG.tab = 'asignar'; RG.emb = !!(o && o.embedded); if (o && o.from && (RG.from !== o.from || RG.to !== o.to)) { RG.from = o.from; RG.to = o.to; DATA.vis = DATA.tar = null; } await render(); } };
+  const api = { render: async (tp, host, o) => { if (tp) RG.tipo = tp; HOST = host; RG.tab = 'asignar'; RG.est = 'pend'; RG.cli = ''; RG.ecm = []; RG.emb = !!(o && o.embedded); if (o && o.from && (RG.from !== o.from || RG.to !== o.to)) { RG.from = o.from; RG.to = o.to; DATA.vis = DATA.tar = null; } await render(); } };
   CN.registro = api;
   VIEWS.registro = async function () {
     if (CN.pendingTab && CN.pendingTab[0] === 'registro') { RG.tab = CN.pendingTab[1]; CN.pendingTab = null; }
-    CN.sub.registro = { tabs: () => TABS.filter(([k]) => CN.tabOk('registro', k)), cur: () => RG.tab, set: (k) => { RG.tab = k; render(); } }; HOST = $('#main'); RG.emb = false; { const ok = TABS.filter(([k]) => CN.tabOk('registro', k)); if (ok.length && !ok.some((t) => t[0] === RG.tab)) RG.tab = ok[0][0]; } await render();
+    CN.sub.registro = { tabs: () => TABS.filter(([k]) => CN.tabOk('registro', k)), cur: () => RG.tab, set: (k) => { RG.tab = k; render(); } }; HOST = $('#main'); RG.emb = false; if (!CN.keepEst) { RG.est = 'pend'; RG.cli = ''; RG.ecm = []; } CN.keepEst = false; { const ok = TABS.filter(([k]) => CN.tabOk('registro', k)); if (ok.length && !ok.some((t) => t[0] === RG.tab)) RG.tab = ok[0][0]; } await render();
   };
 })();
