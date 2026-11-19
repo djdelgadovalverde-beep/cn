@@ -1,0 +1,11 @@
+const { chromium } = require('playwright'); const fs=require('fs'),path=require('path'),http=require('http');
+const NM = path.join(__dirname, '..', 'node_modules') + '/';
+const WEB=path.join(__dirname,'..','web'),T=__dirname;
+const srv=http.createServer((req,res)=>{let f=path.join(WEB,req.url.split('?')[0]==='/'?'index.html':req.url.split('?')[0]);if(!fs.existsSync(f)){res.writeHead(404);return res.end()}res.writeHead(200,{'Content-Type':f.endsWith('.js')?'application/javascript':f.endsWith('.css')?'text/css':'text/html'});res.end(fs.readFileSync(f))});
+(async()=>{await new Promise(r=>srv.listen(8782,r));const b=await chromium.launch(),p=await(await b.newContext()).newPage(),errs=[];p.on('pageerror',e=>errs.push(e.message));
+await p.route('https://cdn.jsdelivr.net/**',r=>{const u=r.request().url();if(/supabase/.test(u))return r.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(__dirname,'fake.js'))});if(/xlsx/.test(u))return r.fulfill({contentType:'application/javascript',body:fs.readFileSync(path.join(NM,'xlsx/dist/xlsx.full.min.js'))});r.abort()});
+await p.goto('http://localhost:8782/');await p.waitForSelector('#nav [data-go]');
+const r=await p.evaluate(async()=>{const d='2020-01-01',h='2030-01-01';const o=await CN.optsVT('vis',d,h);const sup=o[0].sup;const log=[];const of=sb.from.bind(sb);sb.from=(t)=>{log.push(t);return of(t)};
+ const a=await CN.cargarVT('vis',d,h,{sup:[sup]}); const n1=log.length; const f=await CN.cargarVT('vis',d,h,{}); const n2=log.length; const c=await CN.cargarVT('vis',d,h,{sup:[sup]}); const n3=log.length;
+ return {opts:o.length,sup,filtradas:a.R.length,todas:f.R.length,soloSup:a.R.every(x=>x.sup===sup),consultas:[n1,n2-n1,n3-n2],reuso:c.R.length===f.R.length}});
+console.log(JSON.stringify(r));console.log('errores',errs.length,errs[0]||'');await b.close();srv.close()})();

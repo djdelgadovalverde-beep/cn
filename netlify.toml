@@ -1,0 +1,5 @@
+# Sitio estático: no hay compilación. Para no gastar créditos, Netlify NO construye al subir a GitHub;
+# se publica solo a mano (ver README, sección «Publicar»).
+[build]
+  publish = "web"
+  ignore = "exit 0"
