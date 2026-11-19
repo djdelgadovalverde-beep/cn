@@ -88,7 +88,7 @@
       } catch (e) { console.warn('Lectura por flujo no disponible; se usa el lector normal.', e); } finally { CN.ocupado && CN.ocupado(''); }
     }
     /* CSV: se detecta la codificación (UTF-8 o Windows-1252) para no dañar tildes y eñes, y el separador (; o ,) */
-    let wb; if (/\.csv$/i.test(f.name)) { const buf = await f.arrayBuffer(); let txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); } if (txt.charCodeAt(0) === 0xfeff) txt = txt.slice(1); const l1 = txt.split('\n', 1)[0]; wb = XLSX.read(txt, { type: 'string', cellDates: true, FS: l1.split(';').length >= l1.split(',').length ? ';' : ',' }); }
+    let wb; if (/\.csv$/i.test(f.name)) { const buf = await f.arrayBuffer(); let txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); } if (txt.charCodeAt(0) === 0xfeff) txt = txt.slice(1); const l1 = txt.split('\n', 1)[0]; wb = XLSX.read(txt, { type: 'string', /* sin cellDates: SheetJS leería 01/11/2026 como mes/día (EE. UU.); así queda texto y toISO lo lee día/mes */ FS: l1.split(';').length >= l1.split(',').length ? ';' : ',' }); }
     else wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
     for (const n of wb.SheetNames) {
       const ws = wb.Sheets[n], j = XLSX.utils.sheet_to_json(ws, { defval: null, raw: true }); if (!j.length) continue;
