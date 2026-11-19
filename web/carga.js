@@ -78,6 +78,14 @@
 
   /* lee el libro: por cada hoja con datos devuelve {tp, rows (objetos con claves normalizadas), ws, kk} */
   async function leerArchivo(f) {
+    /* archivos .xlsx pesados (exportes de encuestas): lectura por flujo, fila a fila, sin armar el libro completo (no agota la memoria) */
+    if (/\.xlsx$/i.test(f.name) && f.size > 12e6 && CN.xlsxFlujo) {
+      try {
+        const A = await CN.xlsxFlujo(await f.arrayBuffer(), (n) => CN.ocupado && CN.ocupado('Leyendo ' + f.name + ': ' + n.toLocaleString('es-EC') + ' filas…'));
+        if (A.length > 1) { const orig = A[0].map((h, i) => String(h || '').trim() || 'COL' + i), keys = orig.map(key), tp = detectar(keys);
+          if (tp && tp !== 'tar') { const rows = []; for (let i = 1; i < A.length; i++) { const o = {}; keys.forEach((k, c) => { const v = A[i][c]; if (v !== '' && v !== undefined) o[k] = v; }); rows.push(o); } return { tp, rows, keys, file: f }; } }
+      } catch (e) { console.warn('Lectura por flujo no disponible; se usa el lector normal.', e); } finally { CN.ocupado && CN.ocupado(''); }
+    }
     /* CSV: se detecta la codificación (UTF-8 o Windows-1252) para no dañar tildes y eñes, y el separador (; o ,) */
     let wb; if (/\.csv$/i.test(f.name)) { const buf = await f.arrayBuffer(); let txt; try { txt = new TextDecoder('utf-8', { fatal: true }).decode(buf); } catch (e) { txt = new TextDecoder('windows-1252').decode(buf); } if (txt.charCodeAt(0) === 0xfeff) txt = txt.slice(1); const l1 = txt.split('\n', 1)[0]; wb = XLSX.read(txt, { type: 'string', cellDates: true, FS: l1.split(';').length >= l1.split(',').length ? ';' : ',' }); }
     else wb = XLSX.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
