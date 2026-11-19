@@ -304,12 +304,15 @@
       ['Espacios ganados', data.gan.filas, rg(data.gan), c.gan], ['Rutero (PDV)', data.rutero, '', c.rut], ['ECM', data.ecm, '', c.ecm], ['Enlaces de fotos', data.enlaces, '', c.enl], ['Metas', data.metas, '', c.meta], ['Justificaciones', data.justif, '', '']];
     return `<div class="card"><h2>Estado de los datos</h2><div class="tw"><table><thead><tr><th>Base</th><th class="n">Registros</th><th>Fechas</th><th>Última carga</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td class="n">${fN(r[1])}</td><td>${esc(r[2])}</td><td>${f(r[3])}</td></tr>`).join('')}</tbody></table></div></div>`;
   }
+  let ERRCARGA = null;
+  const AYUDA = (m) => (/timeout|statement/i.test(m) ? 'Supabase cortó una consulta por tardar demasiado. Vuelve a intentarlo; si pasa de nuevo, sube el archivo en partes más pequeñas.' : /memory|allocation|Invalid (string|array)|Maximum call/i.test(m) ? 'El navegador se quedó sin memoria al leer el archivo. Cierra otras pestañas, recarga con Ctrl+F5 y vuelve a intentarlo; si persiste, guarda el Excel en partes más pequeñas.' : /row-level security|permission|42501|policy/i.test(m) ? 'Tu usuario no tiene permiso para guardar estos datos. Solo el administrador puede cargar bases.' : /JWT|401|expired/i.test(m) ? 'Tu sesión venció. Cierra sesión y vuelve a entrar.' : /fetch|network|Failed to fetch|NetworkError/i.test(m) ? 'Se cortó la conexión con Supabase. Revisa tu internet y vuelve a intentarlo.' : '');
   async function pintar() {
     const m = $('#main');
     const lista = CARGA.map((c, i) => c.err ? `<div class="card" style="border-color:var(--bad)">${esc(c.err)}</div>` :
       `<div class="card"><div class="bar" style="margin:0"><h3 style="flex:1">${NOMBRE[c.tp]} · ${esc(c.file.name)}</h3><button data-q="${i}">Quitar</button></div><p class="note">${fN(c.rows.length)} filas${c.falta.length ? `<br><b style="color:var(--bad)">Faltan columnas (quedarán vacías): ${esc(c.falta.join(', '))}</b>` : ''}</p></div>`).join('');
     const hayVT = CARGA.some((c) => c.tp === 'vis' || c.tp === 'tar');
     m.innerHTML = `<div id="est">Cargando estado…</div>
+    ${ERRCARGA ? `<div class="card" role="alert" style="border-left:4px solid var(--bad)"><h3 style="color:var(--bad)">La carga se detuvo${ERRCARGA.paso ? ' en: ' + esc(ERRCARGA.paso) : ''}</h3><p>${esc(ERRCARGA.msg)}</p>${ERRCARGA.ayuda ? `<p class="note">${esc(ERRCARGA.ayuda)}</p>` : ''}<p class="note">Lo ya guardado queda guardado. Puedes volver a subir el mismo archivo: el modo «Actualizar» no duplica filas.</p></div>` : ''}
     ${RES.length ? `<div class="card" style="border-left:4px solid var(--ok)"><h3>Resultado de la última carga</h3>${RES.map(resumenHTML).join('')}</div>` : ''}
     <div class="card"><h2>Cargar archivos</h2><p class="note">Sube uno o varios Excel a la vez: la plataforma reconoce cada uno por sus encabezados (visitas, tareas, rutero, ECM, enlaces de fotos, espacios ganados, encuestas SOS/SOE o metas) y los carga en el orden correcto.</p>
       <div class="bar"><input type="file" id="fl" aria-label="Elegir archivos de Excel o CSV para cargar" accept=".xlsx,.xls,.csv" multiple></div><div id="lista">${lista}</div>
@@ -319,7 +322,7 @@
     document.querySelectorAll('.nodo').forEach((d) => { const r = RES[+d.dataset.n]; if (r && r.node) d.appendChild(r.node); });
     $('#est').outerHTML = '<div id="est"></div>'; estado().then((h) => { const e = $('#est'); if (e) e.innerHTML = h; }).catch(fail);
     $('#fl').onchange = async (ev) => {
-      CARGA = []; RES = []; for (const f of ev.target.files) { try { const a = await leerArchivo(f); a.falta = (FALTAN[a.tp] || []).filter((c) => !a.keys.includes(key(c))); CARGA.push(a); } catch (e) { CARGA.push({ err: f.name + ': ' + e.message }); } } pintar();
+      CARGA = []; RES = []; for (const f of ev.target.files) { try { const a = await leerArchivo(f); a.falta = (FALTAN[a.tp] || []).filter((c) => !a.keys.includes(key(c))); CARGA.push(a); } catch (e) { console.error('No se pudo leer', f.name, e); CARGA.push({ err: f.name + ': ' + e.message + (AYUDA(String(e.message)) ? ' — ' + AYUDA(String(e.message)) : '') }); } } ERRCARGA = null; pintar();
     };
     document.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { CARGA.splice(+b.dataset.q, 1); pintar(); });
     $('#sync').onclick = async () => { const { data, error } = await sb.rpc('ecm_sync'); error ? fail(error) : toast(`ECM completados: ${data}`); };
@@ -329,13 +332,13 @@
   async function ejecutar() {
     const modo = ($('#cmod') || {}).value || 'actualizar'; const go = $('#go'), msg = $('#msg'), say = (t) => (msg.textContent = t);
     if (modo === 'todo' && !confirm('Se borrará toda la base actual de visitas/tareas cargadas y se reemplazará. Las justificaciones se conservan. ¿Continuar?')) return;
-    go.disabled = true; RES = [];
+    go.disabled = true; RES = []; ERRCARGA = null; let paso = '';
     const L = CARGA.filter((c) => !c.err), orden = ['ecm', 'rut', 'vis', 'tar', 'enl', 'gan', 'enc', 'meta'];
     try {
       const cfg = (await sb.from('config').select('*')).data || []; S.cfg = Object.fromEntries(cfg.map((r) => [r.clave, r.valor]));
       let A = await apoyo();
       for (const tp of orden) for (const c of L.filter((x) => x.tp === tp)) {
-        say(`Procesando ${NOMBRE[tp]} · ${c.file.name}…`); let r;
+        paso = `${NOMBRE[tp]} · ${c.file.name}`; say(`Procesando ${paso}…`); let r;
         if (tp === 'ecm') { r = await cargarEcm(c.rows, say); A = await apoyo(); }
         else if (tp === 'rut') { r = await cargarRutero(c.rows, say); A = await apoyo(); }
         else if (tp === 'vis') r = await cargarVT('vis', c.rows, modo, say, A);
@@ -352,7 +355,7 @@
         await sb.from('cargas').insert({ tipo: tp === 'enc' ? 'enc' : tp, modo: tp === 'vis' || tp === 'tar' ? modo : null, archivo: c.file.name.slice(0, 200), filas: r.filas || null, nuevas: r.nuevas || null, actualizadas: r.actualizadas || null, iguales: r.iguales || null, borradas: r.borradas || null, detalle: { trans: r.trans || null, motivoEfectivas: r.motivoEfectivas || null } });
       }
       CARGA = []; if (CN.invalidarAnalisis) CN.invalidarAnalisis(); if (CN.invalidarShare) CN.invalidarShare(); toast('Carga terminada');
-    } catch (e) { fail(e); } finally { pintar(); }
+    } catch (e) { console.error('Carga detenida en:', paso, e); const msg2 = String((e && (e.message || e.details || e.hint)) || e); ERRCARGA = { paso, msg: msg2 + (e && e.code ? ' (código ' + e.code + ')' : ''), ayuda: AYUDA(msg2 + ' ' + (e && e.code || '')) }; } finally { pintar(); }
   }
   VIEWS.carga = async function () { await pintar(); };
 })();
