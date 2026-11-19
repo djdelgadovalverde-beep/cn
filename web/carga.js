@@ -48,13 +48,14 @@
   /* fechas con hora → milisegundos (para la duración de la visita) */
   function ms(x) {
     if (x instanceof Date) return x.getTime();
+    if (typeof x === 'number') return serialMs(x);
     const s = String(x == null ? '' : x).trim(); let m = s.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
     if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0));
     m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})[ T](\d{1,2}):(\d{2})(?::(\d{2}))?/);
     return m ? Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)) : NaN;
   }
   const minutos = (a, b) => { const x = ms(a), y = ms(b); return isNaN(x) || isNaN(y) || y < x ? null : Math.round((y - x) / 1000) / 60; };
-  const dt = (v) => (v instanceof Date ? new Date(v.getTime() - v.getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ') : TXT(v));
+  const dt = (v) => (typeof v === 'number' && !isNaN(serialMs(v)) ? new Date(serialMs(v)).toISOString().slice(0, 19).replace('T', ' ') : v instanceof Date ? new Date(v.getTime() - v.getTimezoneOffset() * 60000).toISOString().slice(0, 19).replace('T', ' ') : TXT(v));
 
   /* ---------- detección del tipo de archivo (por encabezados) ---------- */
   function detectar(keys) {

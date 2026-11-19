@@ -297,7 +297,10 @@ function detalleShare(rows, info) {
 
 /* ---------- Carga de bases (gerencia / admin) ---------- */
 const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+/* número de serie de Excel (p. ej. 46327 = 2026-11-01) → milisegundos en hora local de pared, o NaN si no parece una fecha */
+const serialMs = (v) => (typeof v === 'number' && v > 30000 && v < 80000 ? Math.round((v - 25569) * 86400000) : NaN);
 function toISO(v) {
+  if (typeof v === 'number') { const t = serialMs(v); return isNaN(t) ? '' : new Date(t).toISOString().slice(0, 10); }
   if (v instanceof Date) return new Date(v.getTime() - v.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
   const s = String(v == null ? '' : v).trim(); let x;
   if ((x = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return `${x[1]}-${x[2]}-${x[3]}`;
