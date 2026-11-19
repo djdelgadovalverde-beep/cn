@@ -57,7 +57,7 @@ function loginView(msg) {
     ev.preventDefault();
     const u = $('#u').value.trim().toLowerCase().split('@')[0].replace(/[^a-z0-9._-]/g, ''); /* solo el código: si alguien escribe un correo se usa lo anterior a la @ */
     const { error } = await sb.auth.signInWithPassword({ email: `${u}@cn.app`, password: $('#p').value });
-    if (error) $('#lm').textContent = 'Usuario o contraseña incorrectos.'; else boot();
+    if (error) $('#lm').textContent = (error.code === 'email_provider_disabled' || /disabled/i.test(error.message || '')) ? 'El acceso por contraseña está desactivado en Supabase (Authentication → Sign In / Providers → Email). Avisa al administrador.' : error.status === 429 ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' : 'Usuario o contraseña incorrectos.'; else boot();
   };
 }
 /* ---------- Armazón: panel lateral con botones principales y secundarios ---------- */
