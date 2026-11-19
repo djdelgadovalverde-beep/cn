@@ -1,0 +1,20 @@
+{
+  "name": "cn-plataforma",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Plataforma de desempeño comercial (visitas, tareas, SOS/SOE). Sitio estático + Supabase.",
+  "scripts": {
+    "dev": "node tests/serve.js",
+    "check": "node tests/check-syntax.js",
+    "test": "node tests/dup.js && node tests/run.js && node tests/reg.js",
+    "test:todo": "node tests/dup.js && node tests/run.js && node tests/reg.js && node tests/vt2.js && node tests/pl.js"
+  },
+  "devDependencies": {
+    "exceljs": "4.4.0",
+    "html2canvas": "1.4.1",
+    "jspdf": "2.5.1",
+    "playwright": "^1.48.0",
+    "pptxgenjs": "3.12.0",
+    "xlsx": "0.18.5"
+  }
+}

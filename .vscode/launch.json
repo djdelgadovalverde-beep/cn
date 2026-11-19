@@ -1,0 +1,6 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "Abrir en Chrome (servidor local)", "type": "chrome", "request": "launch", "url": "http://localhost:5173", "webRoot": "${workspaceFolder}/web" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Servidor local (http://localhost:5173)", "type": "shell", "command": "npm run dev", "isBackground": true, "problemMatcher": [], "group": { "kind": "build", "isDefault": true } },
+    { "label": "Revisar sintaxis", "type": "shell", "command": "npm run check", "problemMatcher": [] },
+    { "label": "Pruebas (rápidas)", "type": "shell", "command": "npm test", "problemMatcher": [] },
+    { "label": "Pruebas (todas)", "type": "shell", "command": "npm run test:todo", "problemMatcher": [] }
+  ]
+}
