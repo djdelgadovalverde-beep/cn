@@ -1,0 +1,13 @@
+/* Prueba del lector por flujo: genera un .xlsx grande (encuesta de ejemplo) y compara con el lector normal. */
+const { chromium } = require('playwright'); const fs = require('fs'), path = require('path'), http = require('http');
+const XLSX = require('xlsx'), WEB = path.join(__dirname, '..', 'web'), N = +process.argv[2] || 120000;
+const hdr = ['NombreEncuesta', 'CodigoCliente', 'NombreCliente', 'Fecha Encuesta', 'BDR', 'Supervision', 'Gerencia', 'DescripcionPregunta', 'Respuesta'];
+const rows = [hdr]; for (let i = 0; i < N; i++) rows.push(['SOS Percha', String(10000000 + (i % 1300)), 'PDV ' + (i % 1300) + ' ñandú', new Date(Date.UTC(2026, 10, 4 + (i % 5))), 'ECM' + String(1 + (i % 70)).padStart(3, '0'), 'ANA PEREZ', 'GV1', 'INGRESA LAS CARAS POR MARCA ' + (i % 40), 1 + (i % 9)]);
+const ws = XLSX.utils.aoa_to_sheet(rows, { cellDates: true }), wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Datos');
+const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }); console.log('xlsx generado:', (buf.length / 1e6).toFixed(1), 'MB,', N, 'filas');
+const srv = http.createServer((req, res) => { const p = req.url.split('?')[0]; if (p === '/g.xlsx') { res.writeHead(200); return res.end(buf); } const f = path.join(WEB, p === '/' ? 'index.html' : p); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : 'text/html' }); res.end(fs.readFileSync(f)); });
+(async () => { await new Promise((r) => srv.listen(8790, r)); const b = await chromium.launch(), p = await (await b.newContext()).newPage(), errs = []; p.on('pageerror', (e) => errs.push(e.message));
+  await p.route('https://cdn.jsdelivr.net/**', (r) => { const u = r.request().url(); if (/supabase/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, 'fake.js')) }); if (/xlsx/.test(u)) return r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(path.join(__dirname, '..', 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js')) }); r.abort(); });
+  await p.goto('http://localhost:8790/'); await p.waitForSelector('#nav [data-go]');
+  const r = await p.evaluate(async () => { const buf = await (await fetch('/g.xlsx')).arrayBuffer(); const t0 = performance.now(), A = await CN.xlsxFlujo(buf), t1 = performance.now(); return { filas: A.length, ms: Math.round(t1 - t0), cab: A[0].join('|'), f1: A[1].join('|'), nombre: A[1][2], ultima: A[A.length - 1].join('|') }; });
+  console.log(JSON.stringify(r), 'errores:', errs.length); await b.close(); srv.close(); })();
