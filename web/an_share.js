@@ -6,6 +6,7 @@
   const ymd = (d) => d.toISOString().slice(0, 10);
   const add = (d, n) => { const t = new Date(d + 'T00:00:00Z'); t.setUTCDate(t.getUTCDate() + n); return ymd(t); };
   const wl = (w) => w.slice(8) + '/' + w.slice(5, 7);
+  const wr = (w) => { const e = new Date(new Date(w + 'T00:00:00Z').getTime() + 6 * 864e5).toISOString().slice(0, 10); return `mié ${wl(w)} → mar ${wl(e)}`; };
   const ST = { from: '', to: '', reg: [], cad: [], sup: [], ecm: [], tab: 'sem', dim: 'supervisor', sem: '', q: '', dp: 0 };
   let OPTS = null; const CACHE = {};
   const metaS = () => Number(S.cfg.meta_sos || 0.8), metaE = () => Number(S.cfg.meta_soe || 0.8);
@@ -63,7 +64,7 @@
     const key = kind === 'sos' ? 'sos' : 'soe', blk = kind === 'sos' ? 'p' : 'e';
     const L = Object.keys(D1).map((k) => { const a = acum(D1[k]), b = D0[k] ? acum(D0[k]) : null; return { k, a, b, v: a[key], d: b ? a[key] - b[key] : null, nom: D1[k][0].nombre }; }).filter((x) => x.a[blk].tot > 0).sort((p, q) => (p.v ?? 999) - (q.v ?? 999));
     const T = acum(W[w1]), dims = [['supervisor', 'Supervisor'], ['ecm', 'ECM'], ['region', 'Región'], ['cadena', 'Cadena']];
-    return `<div class="bar">${dims.map(([k, t]) => `<button data-sdim="${k}" class="${k === dm ? 'pri' : ''}">${t}</button>`).join('')}<label>Semana<select id="s_sem">${[...ws].reverse().map((w) => `<option value="${w}" ${w === w1 ? 'selected' : ''}>${w} (sem. ${wl(w)})</option>`).join('')}</select></label></div>
+    return `<div class="bar">${dims.map(([k, t]) => `<button data-sdim="${k}" class="${k === dm ? 'pri' : ''}">${t}</button>`).join('')}<label>Semana<select id="s_sem">${[...ws].reverse().map((w) => `<option value="${w}" ${w === w1 ? 'selected' : ''}>Semana ${wr(w)}</option>`).join('')}</select></label></div>
       <div class="kp">${kpi('Share CN ' + (kind === 'sos' ? 'SOS' : 'SOE'), f1(T[key]), w0 ? delta(T[key], acum(W[w0])[key]) + ' vs anterior' : '', T[key] >= meta * 100 ? 'var(--cE)' : 'var(--cP)')}${kpi('Total caras', fN(T[blk].tot), '')}${kpi('Meta', (meta * 100).toFixed(0) + '%', '')}${kpi('Bajo la meta', fN(L.filter((x) => x.v < meta * 100).length), `de ${L.length}`, 'var(--cP)')}</div>
       <div class="g2"><div class="card"><h3>Share CN por ${dims.find((d) => d[0] === dm)[1].toLowerCase()} · menor a mayor</h3>${hbar(L.slice(0, 15).map((x) => ({ l: x.k || '—', v: x.v, t: f1(x.v), c: x.v >= meta * 100 ? 'var(--cE)' : 'var(--cP)', tip: `${x.k}\nShare CN ${f1(x.v)}${x.d != null ? '\nvs anterior ' + (x.d >= 0 ? '+' : '') + x.d.toFixed(1) + ' pp' : ''}` })), { max: 100, meta: meta * 100 })}</div>
       <div class="card"><h3>Composición por grupo</h3>${stack(L.slice(0, 12).map((x) => ({ l: x.k || '—', segs: GRP.map((g) => ({ v: x.a[blk][g], c: GC[g], n: g })) })))}${legend(GRP.map((g) => [g, GC[g]]))}</div></div>
@@ -88,7 +89,7 @@
     const w1 = ST.sem && ws.includes(ST.sem) ? ST.sem : ws[ws.length - 1], rows = await agg('pdv', { from: w1, to: add(w1, 6) }), D = byDim(rows), q = norm(ST.q);
     let L = Object.keys(D).map((k) => { const a = acum(D[k]); return { k, nom: D[k][0].nombre || '', a }; }).filter((x) => !q || norm(x.k + ' ' + x.nom).includes(q)).sort((p, q2) => (p.a.sos ?? 999) - (q2.a.sos ?? 999));
     const canEdit = (can('admin', 'gerencia', 'supervisor') && CN.puede('sos_editar'));
-    return `<div class="bar"><label>Semana<select id="s_sem">${[...ws].reverse().map((w) => `<option value="${w}" ${w === w1 ? 'selected' : ''}>${w} (sem. ${wl(w)})</option>`).join('')}</select></label><label>Buscar PDV<input id="s_q" value="${esc(ST.q)}" placeholder="Código o nombre"></label><span class="note">${fN(L.length)} PDV con encuesta esa semana.</span></div>
+    return `<div class="bar"><label>Semana<select id="s_sem">${[...ws].reverse().map((w) => `<option value="${w}" ${w === w1 ? 'selected' : ''}>Semana ${wr(w)}</option>`).join('')}</select></label><label>Buscar PDV<input id="s_q" value="${esc(ST.q)}" placeholder="Código o nombre"></label><span class="note">${fN(L.length)} PDV con encuesta esa semana.</span></div>
       <div class="card">${table([{ h: 'Código' }, { h: 'PDV' }, { h: 'Percha', n: 1 }, { h: 'CN', n: 1 }, { h: 'SOS', n: 1 }, { h: 'Espacios', n: 1 }, { h: 'CN', n: 1 }, { h: 'SOE', n: 1 }, ...(canEdit ? [{ h: '' }] : [])], L.map((x) => ({ c: [x.k, esc(x.nom), fN(x.a.p.tot), fN(x.a.p.CN), sc(x.a.sos, metaS()), fN(x.a.e.tot), fN(x.a.e.CN), sc(x.a.soe, metaE()), ...(canEdit ? [`<button data-ep="${x.k}|${w1}">Corregir</button>`] : [])], s: [x.k, x.nom, x.a.p.tot, x.a.p.CN, x.a.sos ?? -1, x.a.e.tot, x.a.e.CN, x.a.soe ?? -1, ''], x: [x.k, x.nom, x.a.p.tot, x.a.p.CN, x.a.sos == null ? '' : +x.a.sos.toFixed(2), x.a.e.tot, x.a.e.CN, x.a.soe == null ? '' : +x.a.soe.toFixed(2)] })), { name: 'share_pdv_' + w1, max: 300 })}</div>`;
   }
 
