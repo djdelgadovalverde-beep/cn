@@ -50,12 +50,12 @@ async function boot() {
 }
 function loginView(msg) {
   $app.innerHTML = `<div class="login"><h2 style="margin-bottom:16px">Desempeño comercial</h2>
-  <form id="lf"><label>Usuario<input id="u" autocomplete="username" required></label>
+  <form id="lf"><label>Usuario (código)<input id="u" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Ej. admin o ecm035" required></label>
   <label>Contraseña<input id="p" type="password" autocomplete="current-password" required></label>
   <button class="pri">Entrar</button><p class="note" id="lm">${esc(msg || '')}</p></form></div>`;
   $('#lf').onsubmit = async (ev) => {
     ev.preventDefault();
-    const u = $('#u').value.trim().toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    const u = $('#u').value.trim().toLowerCase().split('@')[0].replace(/[^a-z0-9._-]/g, ''); /* solo el código: si alguien escribe un correo se usa lo anterior a la @ */
     const { error } = await sb.auth.signInWithPassword({ email: `${u}@cn.app`, password: $('#p').value });
     if (error) $('#lm').textContent = 'Usuario o contraseña incorrectos.'; else boot();
   };
