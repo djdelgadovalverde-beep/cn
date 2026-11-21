@@ -34,6 +34,9 @@ const teamName = () => norm(S.me.supervisor || '');
 
 const VIEWS = {};
 /* ---------- sesión ---------- */
+/* registro de accesos (lo ve solo el administrador): ingreso, sesión retomada y pantallas visitadas */
+window.CN = window.CN || {};
+CN.logAcc = (evento, vista) => { try { if (!S.me) return; sb.from('accesos').insert({ usuario: S.me.id, evento, vista: vista || null, agente: (navigator.userAgent || '').slice(0, 160) }).then(() => { }, () => { }); } catch (e) { } };
 async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return loginView();
@@ -47,6 +50,7 @@ async function boot() {
   S.cfg = Object.fromEntries((c.data || []).map((r) => [r.clave, r.valor]));
   S.motivos = m.data || []; S.ecmMap = e.data || [];
   shell();
+  try { const ss = window.sessionStorage; if (ss.getItem('cn_login')) { ss.removeItem('cn_login'); ss.setItem('cn_ses', '1'); CN.logAcc('login'); } else if (!ss.getItem('cn_ses')) { ss.setItem('cn_ses', '1'); CN.logAcc('sesion'); } } catch (e) { CN.logAcc('sesion'); }
 }
 function loginView(msg) {
   $app.innerHTML = `<div class="login"><h2 style="margin-bottom:16px">Desempeño comercial</h2>
@@ -57,7 +61,7 @@ function loginView(msg) {
     ev.preventDefault();
     const u = $('#u').value.trim().toLowerCase().split('@')[0].replace(/[^a-z0-9._-]/g, ''); /* solo el código: si alguien escribe un correo se usa lo anterior a la @ */
     const { error } = await sb.auth.signInWithPassword({ email: `${u}@cn.app`, password: $('#p').value });
-    if (error) $('#lm').textContent = (error.code === 'email_provider_disabled' || /disabled/i.test(error.message || '')) ? 'El acceso por contraseña está desactivado en Supabase (Authentication → Sign In / Providers → Email). Avisa al administrador.' : error.status === 429 ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' : 'Usuario o contraseña incorrectos.'; else boot();
+    if (error) $('#lm').textContent = (error.code === 'email_provider_disabled' || /disabled/i.test(error.message || '')) ? 'El acceso por contraseña está desactivado en Supabase (Authentication → Sign In / Providers → Email). Avisa al administrador.' : error.status === 429 ? 'Demasiados intentos. Espera unos minutos e inténtalo de nuevo.' : 'Usuario o contraseña incorrectos.'; else { try { sessionStorage.setItem('cn_login', '1'); } catch (e) { } boot(); }
   };
 }
 /* ---------- Armazón: panel lateral con botones principales y secundarios ---------- */
@@ -71,9 +75,9 @@ const ICON = {
   config: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>', plan: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>', alcance: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', registro: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/>', catalogo: '<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.2"/>', admin: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/>',
   salir: '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>', tema: '<path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/>', menu: '<path d="M3 6h18M3 12h18M3 18h18"/>'
 };
-ICON.usuarios = ICON.ecm; ICON.motivos = ICON.registro || ICON.pend; ICON.permisos = '<path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>';
+ICON.usuarios = ICON.ecm; ICON.motivos = ICON.registro || ICON.pend; ICON.accesos = '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'; ICON.permisos = '<path d="M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>';
 const ico = (k) => `<svg viewBox="0 0 24 24" aria-hidden="true">${ICON[k] || ICON.dashboard}</svg>`;
-const GROUPS = [['Análisis', ['dashboard', 'visitas', 'tareas', 'audit']], ['Share de góndola', ['sos', 'ganancias', 'plan', 'alcance', 'metas']], ['Gestión', ['registro', 'pend', 'informe', 'rutero']], ['Datos', ['carga', 'ecm', 'catalogo']], ['Sistema', ['config', 'usuarios', 'permisos', 'motivos']]];
+const GROUPS = [['Análisis', ['dashboard', 'visitas', 'tareas', 'audit']], ['Share de góndola', ['sos', 'ganancias', 'plan', 'alcance', 'metas']], ['Gestión', ['registro', 'pend', 'informe', 'rutero']], ['Datos', ['carga', 'ecm', 'catalogo']], ['Sistema', ['config', 'usuarios', 'permisos', 'motivos', 'accesos']]];
 window.CN = window.CN || {}; CN.sub = {}; CN.pendingTab = null;
 CN.tabOk = (mod, key) => { const d = S.me && S.me.def; if (!d || !d.ver || (S.me.perfil || S.me.rol) === 'admin') return true; return d.ver.includes(mod + ':' + key); };
 CN.puede = (cap) => { const d = S.me && S.me.def; return S.me.rol === 'admin' || !d || !d.editar ? true : d.editar.includes(cap); };
@@ -137,7 +141,7 @@ function panelAuto(k) {
   const mb = document.getElementById('mb'); if (mb) mb.setAttribute('aria-expanded', !app.classList.contains('collapsed'));
 }
 function route() {
-  const ok = curKey(); panelAuto(ok); CN.sideRefresh();
+  const ok = curKey(); panelAuto(ok); CN.sideRefresh(); if (CN.ultVista !== ok) { CN.ultVista = ok; CN.logAcc('pantalla', ok); }
   $('#main').innerHTML = '<p class="note">Cargando…</p>'; $('#main').scrollTop = 0; window.scrollTo(0, 0);
   VIEWS[ok]().then(() => CN.sideRefresh()).catch(fail);
 }
