@@ -274,3 +274,20 @@ tr.today td{background:color-mix(in oklab,var(--brand) 10%,var(--card))}tr.tot t
 a{color:var(--brand)}a button{color:inherit}
 @media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--s1:#4b91ec}}
 :root[data-theme="dark"]{--s1:#4b91ec}
+/* ayuda interactiva */
+.ay-btn{width:36px;min-height:36px;padding:0;border-radius:50%;font-weight:700;color:var(--brand);border:2px solid var(--brand);background:var(--card);margin-left:8px}.ay-btn:hover{background:var(--sel)}
+.ay-panel{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-8px 0 24px #0003;z-index:60;display:flex;flex-direction:column}
+.ay-h{display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line)}.ay-h h2{flex:1;margin:0;font-size:18px;color:var(--brand)}
+.ay-b{padding:12px 16px;overflow:auto;flex:1}.ay-b h3{margin:16px 0 4px;font-size:14px}.ay-b ol,.ay-b ul{padding-left:20px;margin:4px 0}.ay-b li{margin:4px 0}
+.ay-now{background:var(--sel);border-left:4px solid var(--brand);padding:8px 10px;border-radius:6px;margin:10px 0}.ay-tabs{list-style:none;padding:0!important}.ay-tabs li{padding:6px 8px;border-radius:6px;font-size:13.5px}.ay-tabs li.on{background:var(--sel)}
+.ay-pill{font-size:11px;background:var(--brand);color:var(--brand-ink);border-radius:10px;padding:1px 7px}
+.ay-f{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-top:1px solid var(--line)}
+.ay-tour{position:fixed;inset:0;z-index:80}.ay-spot{position:fixed;border-radius:10px;box-shadow:0 0 0 9999px #000a;border:2px solid #ffd54a;transition:all .2s;pointer-events:none}
+.ay-tip{position:fixed;background:var(--card);color:var(--ink);border-radius:12px;padding:14px 16px;box-shadow:0 8px 30px #0006;border:1px solid var(--line)}.ay-tip p{margin:6px 0 10px}.ay-step{font-size:12px;color:var(--mut)}
+.ay-btns{display:flex;gap:8px;align-items:center}
+.ay-welcome{position:fixed;right:16px;bottom:16px;width:min(340px,calc(100vw - 32px));background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:0 8px 30px #0005;z-index:55}.ay-welcome p{margin:6px 0 10px}
+.ay-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}.ay-grid .card{margin:0}.ay-dl dt{font-weight:700;margin-top:8px}.ay-dl dd{margin:2px 0 0;color:var(--mut)}.ay-faq summary{cursor:pointer;font-weight:600}
+@media print{.ay-btn,.ay-panel,.ay-welcome,.ay-tour{display:none!important}}
+.ay-sub{display:block;font-size:11px;font-weight:400;color:var(--mut);line-height:1.25;white-space:normal;margin-top:1px}.sbtn.on .ay-sub{color:inherit;opacity:.8}
+.ay-intro{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;background:var(--sel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:10px 14px;margin:0 0 14px}.ay-i{flex:1;min-width:240px;font-size:13.5px}.ay-tb{color:var(--mut)}.ay-ib{display:flex;gap:6px;flex-wrap:wrap}.ay-ib button{min-height:32px;padding:4px 10px;font-size:13px}
+.ay-wm{z-index:90}
