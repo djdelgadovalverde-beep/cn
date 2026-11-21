@@ -1,0 +1,183 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Manual de administración y gerencia</title><link rel="stylesheet" href="estilo.css"></head><body>
+<div class="portada"><h1>Manual de administración y gerencia</h1><div class="sub">Uso, gestión y manual técnico para quienes dirigen y administran la plataforma</div>
+<div class="meta">Versión 1.1 · noviembre de 2026<br>Sitio: https://djdelgadovalverde-beep.github.io/cn/<br>Repositorio: github.com/djdelgadovalverde-beep/cn · Base de datos: Supabase (proyecto iizebvjhmpglgsunmtog)</div></div>
+
+<div class="ind"><h2>Contenido</h2><ol>
+<li>Resumen ejecutivo</li><li>Roles y responsabilidades</li>
+<li>PARTE 1 · GERENCIA: leer y decidir</li><li>Qué ve gerencia</li><li>Cómo leer el desempeño</li><li>Auditoría y control</li><li>Reportes para reuniones</li>
+<li>PARTE 2 · ADMINISTRACIÓN: operar la plataforma</li><li>Rutina de operación</li><li>Cargar las bases</li><li>Usuarios</li><li>Tipos de usuario y permisos</li><li>Pesos, metas y configuración</li><li>Motivos, catálogo y equipo ECM</li><li>Accesos y movimiento</li><li>Cierre de mes</li>
+<li>PARTE 3 · TÉCNICO PARA ADMINISTRACIÓN</li><li>Cómo está construida</li><li>Cuentas y accesos que se deben custodiar</li><li>Seguridad y qué es público</li><li>Respaldo y continuidad</li><li>Costos y límites</li><li>Publicar cambios</li><li>Problemas y soluciones</li><li>Lista de verificación periódica</li><li>Glosario</li></ol></div>
+
+<h2>1. Resumen ejecutivo</h2>
+<div class="dest"><b>Qué es:</b> un sitio web seguro, de <b>costo cero</b>, que reemplaza los sistemas de Apps Script de visitas/tareas y de SOS/SOE. Mide a cada mercaderista con un <b>puntaje</b> (20 % visitas, 30 % tareas, 30 % tareas de frío, 10 % SOS, 10 % SOE) y permite justificar lo no efectivo con control y trazabilidad.</div>
+<ul><li><b>Una sola fuente de verdad:</b> los reportes se cargan una vez y todos ven la misma información según su alcance.</li>
+<li><b>Seguridad por perfil:</b> cada persona ve solo lo suyo; el control está en la base de datos, no solo en la pantalla.</li>
+<li><b>Trazabilidad:</b> todo cambio queda en el historial con quién, cuándo y qué.</li>
+<li><b>Sin correos:</b> los usuarios ingresan con un código (admin, ecm035…).</li></ul>
+
+<h2>2. Roles y responsabilidades</h2>
+<table><tr><th>Rol</th><th>Alcance de datos</th><th>Responsabilidad principal</th></tr>
+<tr><td><b>Administrador</b></td><td>Todo</td><td>Cargar bases, crear usuarios y permisos, configuración, accesos. <b>Único que carga datos nuevos.</b></td></tr>
+<tr><td><b>Gerencia</b></td><td>Todo (solo lectura); en «Datos» solo ve Equipo ECM</td><td>Analizar, auditar y decidir. No carga bases.</td></tr>
+<tr><td><b>Supervisor</b></td><td>Su equipo (todos si no tiene nombre asignado), opcionalmente limitado por regiones</td><td>Justificar, gestionar pendientes y revisar a su equipo.</td></tr>
+<tr><td><b>Mercaderista</b></td><td>Solo sus datos</td><td>Ejecutar y justificar.</td></tr></table>
+<p>Se pueden crear tipos intermedios (por ejemplo «Analista de región») con permisos pantalla por pantalla.</p>
+
+<div class="parte"><h1>PARTE 1 · Gerencia</h1><p>Lectura, análisis y control. Gerencia no modifica datos operativos ni carga bases.</p></div>
+
+<h2>3. Qué ve gerencia</h2>
+<table><tr><th>Menú</th><th>Para qué sirve</th></tr>
+<tr><td>Dashboard</td><td>Puntaje y componentes del mes por ECM, supervisor y total.</td></tr>
+<tr><td>Visitas / Tareas</td><td>Efectividad, ranking, motivos, reincidencias, calidad, duración, mapa de calor, proyección, insights y cruce antifraude.</td></tr>
+<tr><td>Auditoría de justificaciones</td><td>Motivos, responsables, cola de revisión, observaciones repetidas, avance e historial de cambios.</td></tr>
+<tr><td>SOS y SOE</td><td>Share de góndola semanal, evolución, marcas, productos, PDV, análisis y alertas.</td></tr>
+<tr><td>Espacios ganados, Plan diario, Alcance, Metas</td><td>Cumplimiento de planes y metas.</td></tr>
+<tr><td>Asignar motivos, Pendientes, Informe mensual, Rutero</td><td>Seguimiento de gestión y reportes.</td></tr>
+<tr><td>Datos → Equipo ECM</td><td>Relación de mercaderistas con su supervisor y región.</td></tr></table>
+
+<h2>4. Cómo leer el desempeño</h2>
+<ol class="paso"><li><b>Dashboard:</b> elige el mes. Identifica los componentes bajo meta (rojo) a nivel total, luego por supervisor.</li>
+<li><b>Ranking</b> en Visitas y Tareas: ordena equipos y ECM. Busca quién arrastra el resultado.</li>
+<li><b>Informe de motivos:</b> qué porcentaje de lo no efectivo se justifica y con qué responsable. Si pesa mucho «CN», hay un problema de proceso, no de personas.</li>
+<li><b>Reincidencias:</b> clientes con fallas repetidas; sugiere acciones de ruta o de relación comercial.</li>
+<li><b>Proyección e Insights:</b> hacia dónde va el mes y qué recomienda el análisis automático.</li>
+<li><b>SOS y SOE → Resumen semanal:</b> compara la semana con la anterior, mira PDV bajo meta y espacios ganados.</li></ol>
+<div class="nota"><b>Ojo con la efectividad ajustada:</b> solo cuenta los motivos ya asignados. Si hay muchos pendientes sin justificar, el resultado real puede ser mejor al mostrado; la auditoría indica el porcentaje de avance.</div>
+
+<h2>5. Auditoría y control</h2>
+<ul><li><b>Para revisar:</b> justificaciones con banderas (observaciones repetidas, sin evidencia, responsable CN dominante, antigüedad). Se aprueban o rectifican.</li>
+<li><b>Observaciones repetidas:</b> el mismo texto usado muchas veces suele indicar justificación genérica.</li>
+<li><b>Cruce antifraude</b> (Visitas): contrasta la visita con las evidencias y enlaces de Involves.</li>
+<li><b>Historial de cambios:</b> quién cambió qué y cuándo, en lenguaje claro. Filtra por «Dónde» y «Qué se hizo».</li>
+<li><b>Avance por supervisor:</b> qué supervisores mantienen sus pendientes al día.</li></ul>
+
+<h2>6. Reportes para reuniones</h2>
+<ul><li>Cada tabla se exporta a <b>Excel, PNG y PDF</b>; Visitas y Tareas también a <b>PowerPoint</b>.</li><li>El <b>Informe mensual</b> está listo para presentar.</li><li>El <b>Resumen semanal</b> de SOS y SOE se puede copiar o imprimir.</li><li>Las exportaciones respetan los filtros: ajusta fechas y supervisor antes de descargar.</li></ul>
+
+<div class="parte"><h1>PARTE 2 · Administración</h1><p>Operación diaria de la plataforma. Solo el administrador ve los menús de Datos (cargas, catálogo) y Sistema.</p></div>
+
+<h2>7. Rutina de operación</h2>
+<table><tr><th>Frecuencia</th><th>Tarea</th></tr>
+<tr><td>Diaria</td><td>Cargar visitas y tareas del día anterior (modo «Actualizar»); revisar el resultado de la carga.</td></tr>
+<tr><td>Semanal (miércoles)</td><td>Cargar las encuestas SOS/SOE y espacios ganados de la semana; revisar preguntas sin clasificar en el catálogo.</td></tr>
+<tr><td>Semanal</td><td>Revisar Accesos y movimiento: quién no ingresa, cambios inusuales.</td></tr>
+<tr><td>Mensual</td><td>Actualizar rutero y equipo ECM si hubo cambios; definir metas del mes; cierre de mes.</td></tr>
+<tr><td>Eventual</td><td>Altas y bajas de usuarios; ajustes de permisos y pesos.</td></tr></table>
+
+<h2>8. Cargar las bases</h2>
+<p>Menú <b>Datos → Cargar bases</b>. Se pueden seleccionar varios archivos a la vez; cada uno se reconoce por sus encabezados y se muestra en la lista antes de subirlo (puedes quitar los que no quieras).</p>
+<table><tr><th>Archivo</th><th>Se reconoce por</th><th>Alimenta</th></tr>
+<tr><td>Visitas</td><td>VISIT_DATE</td><td>Visitas</td></tr><tr><td>Tareas</td><td>Estado_Tarea</td><td>Tareas</td></tr>
+<tr><td>Rutero</td><td>Cliente SAP + Nombre cliente</td><td>Rutero</td></tr><tr><td>Equipo ECM</td><td>ECM + Teléfono</td><td>Mercaderistas</td></tr>
+<tr><td>Encuestas SOS/SOE</td><td>Descripción pregunta + Respuesta + Código cliente</td><td>SOS y SOE</td></tr>
+<tr><td>Espacios ganados / enlaces</td><td>Perfil del PDV + Empleado</td><td>Espacios ganados y enlaces</td></tr>
+<tr><td>Metas</td><td>Encabezados de metas</td><td>Metas</td></tr></table>
+<h3>Modos (visitas y tareas)</h3>
+<ul><li><b>Actualizar:</b> agrega nuevo y actualiza lo cambiado, sin borrar. Es el modo normal.</li><li><b>Reemplazar rango:</b> borra y recarga las fechas del archivo (para corregir un período).</li><li><b>Reemplazar todo:</b> deja solo lo del archivo (cuidado: borra el resto).</li></ul>
+<div class="ok"><b>Orden recomendado la primera vez:</b> Equipo ECM → Rutero → Visitas → Tareas → Encuestas → Espacios ganados → Metas. Luego, en <b>Pesos, metas y configuración</b>, pulsa <b>Recalcular</b> (tareas de frío).</div>
+<h3>Cómo leer el resultado</h3>
+<p>Al terminar verás: <i>nuevas · actualizadas · sin cambios · omitidas</i>. «Omitidas» son filas sin fecha, cliente o ECM. Si falla, un panel de error permanece en pantalla con la explicación (no desaparece solo).</p>
+<div class="nota"><b>Archivos CSV:</b> las fechas se leen como día/mes/año. Archivos .xlsx muy grandes (más de 12 MB) se procesan por bloques con barra de progreso; no cierres la pestaña hasta que termine.</div>
+
+<h2>9. Usuarios</h2>
+<p>Menú <b>Sistema → Usuarios</b>.</p>
+<ol class="paso"><li>Pulsa <b>Nuevo usuario</b>.</li><li>Escribe el <b>código</b> (letras, números, punto, guion; por ejemplo ecm035) y el <b>nombre</b>.</li><li>Elige el <b>tipo de usuario</b>.</li><li>Para mercaderistas: <b>código ECM/BDR</b>. Para supervisores: el <b>nombre como viene en las bases</b>; si lo dejas vacío, ve todos los equipos. Marca las <b>regiones</b> si deben limitarse.</li><li>Define la contraseña inicial y entrégala por un canal seguro; pide cambiarla en el primer ingreso.</li></ol>
+<ul><li><b>Cambiar clave:</b> desde la fila del usuario.</li><li><b>Desactivar:</b> el usuario deja de entrar y conserva su historial.</li></ul>
+<div class="nota">El código del mercaderista debe coincidir con el de las bases (ECM035). Si no coincide, esa persona no verá sus datos.</div>
+
+<h2>10. Tipos de usuario y permisos</h2>
+<p>Menú <b>Sistema → Tipos de usuario y permisos</b>. Hay una matriz con una columna por tipo.</p>
+<ul><li><b>Ver:</b> pantallas y, dentro de cada una, pestañas (por ejemplo «Visitas → Cruce antifraude»).</li><li><b>Editar (capacidades):</b> Cargar bases, Equipo ECM, Catálogo de marcas, Metas, Justificar, Revisar justificaciones, Corregir SOS/SOE, Espacios ganados.</li></ul>
+<ol class="paso"><li>Crea un tipo nuevo o ajusta uno existente.</li><li>Marca lo que puede ver y lo que puede editar.</li><li>Guarda y asigna ese tipo a los usuarios.</li></ol>
+<div class="nota"><b>Regla fija:</b> la carga de bases es exclusiva del administrador, aunque se marque la capacidad para otro tipo. El <b>tipo base</b> (admin, gerencia, supervisor, asesor) define el alcance de datos y no se cambia con los permisos.</div>
+
+<h2>11. Pesos, metas y configuración</h2>
+<p>Menú <b>Sistema → Pesos, metas y configuración</b>:</p>
+<table><tr><th>Sección</th><th>Qué controla</th></tr>
+<tr><td>Pesos del puntaje</td><td>20/30/30/10/10 por defecto; deben sumar 100.</td></tr>
+<tr><td>Metas por defecto</td><td>Visitas, tareas, frío, SOS y SOE; se usan solo si no existe meta personalizada del período.</td></tr>
+<tr><td>Semana y exclusiones</td><td>Día de inicio de semana (miércoles) y PDV excluidos de SOS/SOE.</td></tr>
+<tr><td>Tareas de equipo de frío</td><td>Expresión que identifica esas tareas (COOLER, ESPACIO FRÍO, NEVERA). Muestra una vista previa y valida la expresión.</td></tr>
+<tr><td>Otros ajustes</td><td>Fallas para considerar reincidente, duración mínima de visita (2 min), título de la plataforma.</td></tr></table>
+<div class="ok">Tras cambiar la expresión de frío o cargar tareas nuevas, pulsa <b>Recalcular</b> para reclasificar.</div>
+<p><b>Metas personalizadas:</b> en <b>Metas y alcance</b> se crean metas por semana o mes, por región o ECM, con modo y valor; tienen prioridad sobre las metas por defecto.</p>
+
+<h2>12. Motivos, catálogo y equipo ECM</h2>
+<ul><li><b>Catálogo de motivos:</b> cada motivo tiene responsable. <b>CN</b> no penaliza; cualquier otro (por ejemplo SGF) sí. Se pueden activar, desactivar y crear.</li>
+<li><b>Catálogo de marcas:</b> clasifica cada pregunta de encuesta en grupo (CN, competencia, EXCLUIR), tipo (PERCHA, RUMA, BANDEJA FRÍO, BANDEJA SECO), marca y producto. Las preguntas nuevas se clasifican solas; revisa las que quedan sin clasificar. Cambiar una clasificación afecta a todo SOS/SOE.</li>
+<li><b>Equipo ECM:</b> supervisor, región y teléfono de cada mercaderista. Mantenerlo al día evita datos «sin supervisor».</li></ul>
+
+<h2>13. Accesos y movimiento</h2>
+<p>Menú <b>Sistema → Accesos y movimiento</b> (24 horas, 3 o 7 días):</p>
+<ul><li><b>Resumen por usuario:</b> último acceso, accesos, días activos, pantallas y cambios; indica quién no ha entrado.</li><li><b>Accesos:</b> cada ingreso, sesión retomada y pantalla visitada, con dispositivo.</li><li><b>Movimiento:</b> cambios hechos (motivos, cargas, configuración, usuarios) con quién y cuándo.</li></ul>
+<p>Úsalo para detectar usuarios inactivos, accesos a horas inusuales o cambios masivos no esperados. Los accesos se registran desde la publicación de esta función.</p>
+
+<h2>14. Cierre de mes</h2>
+<ol class="paso"><li>Verifica que visitas y tareas del mes estén completas (fecha «Datos hasta…»).</li><li>Carga las últimas encuestas y espacios ganados.</li><li>Pide a supervisores cerrar pendientes; revisa <b>Avance por supervisor</b> en Auditoría.</li><li>Revisa la cola <b>Para revisar</b> y aprueba o rectifica.</li><li>Pulsa <b>Recalcular</b> (frío) si cambiaste la configuración.</li><li>Descarga el <b>Informe mensual</b> y el PowerPoint.</li><li>Define las metas del mes siguiente.</li></ol>
+
+<div class="parte"><h1>PARTE 3 · Técnico para administración</h1><p>Lo que quien administra necesita saber de la parte técnica, sin entrar al código. El detalle completo está en el <b>Manual técnico</b> (documento aparte).</p></div>
+
+<h2>15. Cómo está construida</h2>
+<pre>Navegador (sitio estático)  ──►  Supabase (base de datos, usuarios, fotos, función de altas)
+        ▲
+GitHub (código)  ──publica──►  GitHub Pages (el sitio)</pre>
+<table><tr><th>Pieza</th><th>Qué hace</th><th>Dónde se gestiona</th></tr>
+<tr><td>Sitio web</td><td>Pantallas de la aplicación</td><td>GitHub (repositorio <code>cn</code>); se publica solo al subir cambios</td></tr>
+<tr><td>Base de datos</td><td>Todos los datos y reglas de acceso</td><td>supabase.com → proyecto iizebvjhmpglgsunmtog</td></tr>
+<tr><td>Usuarios y claves</td><td>Ingreso por código</td><td>Supabase Auth (se administra desde la propia plataforma)</td></tr>
+<tr><td>Fotos de evidencia</td><td>Almacén privado de imágenes</td><td>Supabase Storage (bucket evidencias)</td></tr>
+<tr><td>Función de altas</td><td>Crea usuarios y cambia claves de forma segura</td><td>Supabase Edge Function <code>admin-users</code></td></tr></table>
+
+<h2>16. Cuentas y accesos que se deben custodiar</h2>
+<table><tr><th>Cuenta</th><th>Para qué</th><th>Recomendación</th></tr>
+<tr><td>GitHub (propietario del repositorio)</td><td>Código y publicación</td><td>Activar verificación en dos pasos; agregar un segundo administrador.</td></tr>
+<tr><td>Supabase (propietario de la organización)</td><td>Datos, usuarios, configuración</td><td>Verificación en dos pasos; segundo administrador.</td></tr>
+<tr><td>Usuario <code>admin</code> de la plataforma</td><td>Administración funcional</td><td>Clave larga y única; crear un segundo usuario administrador de respaldo.</td></tr></table>
+<div class="nota"><b>Continuidad:</b> si la única persona con acceso a GitHub o Supabase se ausenta, nadie podrá publicar cambios ni recuperar la base. Documenta quién más tiene acceso.</div>
+
+<h2>17. Seguridad y qué es público</h2>
+<ul><li><b>Es público:</b> el código del sitio (el repositorio es público para poder usar GitHub Pages gratis), la dirección de Supabase y una clave «anon» pública por diseño.</li>
+<li><b>No es público:</b> los datos. Sin iniciar sesión, la base no entrega ninguna fila. Cada perfil ve solo lo permitido por reglas en la propia base (RLS).</li>
+<li><b>Contraseñas:</b> las gestiona Supabase; nunca se guardan en el sitio. La clave de servicio (poderosa) vive solo en el servidor.</li>
+<li><b>Fotos:</b> almacén privado; se ven con enlaces temporales.</li>
+<li><b>Trazabilidad:</b> historial automático de cambios y registro de accesos.</li>
+<li><b>Registro abierto desactivado:</b> nadie puede crearse una cuenta; solo el administrador crea usuarios.</li></ul>
+<div class="nota">Pendiente recomendado: activar en Supabase (Authentication → Policies) la protección contra contraseñas filtradas. Si se quiere ocultar también el código, el repositorio puede hacerse privado y publicar con Cloudflare Pages.</div>
+
+<h2>18. Respaldo y continuidad</h2>
+<ul><li><b>Código:</b> está respaldado en GitHub (historial completo de versiones).</li>
+<li><b>Datos:</b> el plan gratuito de Supabase no garantiza respaldos diarios descargables. Recomendado: una vez al mes exportar las tablas clave (Supabase → Table Editor → Export) y guardar los <b>archivos originales de cada carga</b>, que permiten reconstruir visitas, tareas y encuestas.</li>
+<li><b>Esquema:</b> versionar las migraciones del proyecto con <code>supabase db pull</code> (ver Manual técnico).</li>
+<li><b>Datos de configuración</b> (metas, motivos, permisos, catálogo): se pueden exportar desde sus pantallas o la base.</li></ul>
+
+<h2>19. Costos y límites</h2>
+<table><tr><th>Servicio</th><th>Plan</th><th>Límites a vigilar</th></tr>
+<tr><td>GitHub Pages</td><td>Gratis (repositorio público)</td><td>Tamaño del sitio y tráfico mensual (amplios para este uso).</td></tr>
+<tr><td>Supabase</td><td>Gratis</td><td>500 MB de base de datos, almacenamiento de fotos, ancho de banda; <b>los proyectos inactivos se pausan</b> tras un período sin uso.</td></tr></table>
+<p>Las tablas que más crecen son SOS/SOE (<code>share_detalle</code>) y el historial (<code>bitacora</code>). Si se acerca el límite, se pueden archivar meses antiguos o pasar a un plan de pago.</p>
+
+<h2>20. Publicar cambios</h2>
+<ol class="paso"><li>Los cambios al código se suben al repositorio en GitHub (rama <code>main</code>).</li><li>GitHub Actions publica el sitio automáticamente en 1–2 minutos.</li><li>Los usuarios deben recargar con <b>Ctrl + F5</b> para ver la nueva versión.</li></ol>
+<p>Los cambios en la base de datos se hacen como <b>migraciones</b> (nunca editando a mano en producción). Antes de publicar un cambio, el equipo técnico corre las pruebas automáticas (<code>npm test</code>), que no tocan datos reales.</p>
+
+<h2>21. Problemas y soluciones</h2>
+<table><tr><th>Síntoma</th><th>Qué hacer</th></tr>
+<tr><td>Nadie puede ingresar</td><td>En Supabase: Authentication → Sign In / Providers → Email debe estar <b>habilitado</b> (con «Allow new users to sign up» y «Confirm email» apagados).</td></tr>
+<tr><td>Un usuario ingresa pero no ve nada</td><td>Revisar que esté activo, que su tipo tenga permisos y que su código ECM/supervisor coincida con las bases.</td></tr>
+<tr><td>Una carga dice «no hay filas válidas»</td><td>Usar el reporte original sin cambiar encabezados; comprobar que tenga fechas, clientes y ECM.</td></tr>
+<tr><td>Fechas de SOS/SOE en meses equivocados</td><td>Era un problema de lectura de CSV (día/mes); ya está corregido. Si apareciera en datos viejos, pedir corrección por SQL al equipo técnico.</td></tr>
+<tr><td>La plataforma no abre o no responde</td><td>Entrar a Supabase y comprobar que el proyecto no esté <b>pausado</b>; reactivarlo si lo está.</td></tr>
+<tr><td>El sitio no se actualiza tras un cambio</td><td>Revisar GitHub → Actions; si falló, volver a ejecutar el flujo. Recargar con Ctrl + F5.</td></tr>
+<tr><td>Pantallas lentas</td><td>Reducir el rango de fechas; revisar Supabase → Advisors y Logs.</td></tr></table>
+
+<h2>22. Lista de verificación periódica</h2>
+<table><tr><th>Cuándo</th><th>Verificar</th></tr>
+<tr><td>Semanal</td><td>Cargas al día · Accesos y movimiento · pendientes por supervisor · catálogo sin clasificar.</td></tr>
+<tr><td>Mensual</td><td>Respaldo exportado · usuarios inactivos desactivados · metas del mes · uso del plan gratuito (tamaño de la base).</td></tr>
+<tr><td>Trimestral</td><td>Revisar permisos por tipo · cambiar claves de administradores · probar que el proyecto de Supabase no se pause · Advisors de seguridad.</td></tr></table>
+
+<h2>23. Glosario</h2>
+<table><tr><th>Término</th><th>Significado</th></tr>
+<tr><td>ECM / BDR</td><td>Mercaderista.</td></tr><tr><td>PDV</td><td>Punto de venta.</td></tr><tr><td>SOS</td><td>Share de percha (participación de CN en la percha).</td></tr><tr><td>SOE</td><td>Share de espacios (bandejas y rumas).</td></tr><tr><td>Involves</td><td>Herramienta de campo donde se registran visitas, tareas y fotos.</td></tr>
+<tr><td>RLS</td><td>Reglas en la base de datos que limitan qué filas ve cada usuario.</td></tr><tr><td>Migración</td><td>Cambio versionado de la estructura de la base de datos.</td></tr><tr><td>Semana operativa</td><td>Miércoles a martes.</td></tr><tr><td>Efectividad ajustada</td><td>Efectividad que descuenta lo justificado con responsable CN.</td></tr></table>
+</body></html>

@@ -14,3 +14,10 @@ th { background: #0b5d3b; color: #fff; text-align: left; padding: 4pt 6pt; } td 
 .nota { border-left: 4px solid #e0a100; background: #fff8e1; padding: 6pt 10pt; margin: 8pt 0; break-inside: avoid; }
 .ok { border-left: 4px solid #0b5d3b; background: #e8f5ee; padding: 6pt 10pt; margin: 8pt 0; break-inside: avoid; }
 .ind h2 { border: 0; margin-top: 0; } .ind ol { columns: 2; font-size: 10pt; }
+.paso { counter-reset: p; } .paso li { list-style: none; position: relative; padding-left: 24pt; margin: 5pt 0; } .paso { padding-left: 0; }
+.paso li::before { counter-increment: p; content: counter(p); position: absolute; left: 0; top: 0; width: 17pt; height: 17pt; border-radius: 50%; background: #0b5d3b; color: #fff; text-align: center; font: bold 9pt/17pt Arial; }
+.tarjeta { border: 1px solid #d9e0e6; border-radius: 6pt; padding: 7pt 11pt; margin: 8pt 0; break-inside: avoid; background: #fafbfc; } .tarjeta h3 { margin-top: 0; }
+.dest { background: #0b5d3b; color: #fff; border-radius: 6pt; padding: 9pt 13pt; margin: 10pt 0; break-inside: avoid; } .dest b { color: #ffe08a; }
+.chip { display: inline-block; padding: 0 6pt; border-radius: 8pt; font-size: 8.6pt; font-weight: bold; color: #fff; } .c-e { background: #1b8a4b; } .c-p { background: #c0392b; } .c-f { background: #d68910; } .c-m { background: #6c3483; }
+.parte { break-before: page; } .parte h1 { font-size: 20pt; }
+thead { display: table-header-group; }
