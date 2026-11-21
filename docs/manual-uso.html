@@ -1,0 +1,127 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Manual de uso · Desempeño comercial</title><link rel="stylesheet" href="estilo.css"></head><body>
+<div class="portada"><h1>Manual de uso</h1><div class="sub">Plataforma de desempeño comercial CN<br>Visitas · Tareas · SOS / SOE · Justificaciones · Metas · Plan diario</div>
+<div class="meta">Versión 1.0 · noviembre de 2026<br>Sitio: https://djdelgadovalverde-beep.github.io/cn/</div></div>
+
+<div class="ind"><h2>Contenido</h2><ol><li>Qué es la plataforma</li><li>Ingreso y cuenta</li><li>Tipos de usuario y qué ve cada uno</li><li>Cómo moverse</li><li>Dashboard</li><li>Visitas y Tareas</li><li>Auditoría de justificaciones</li><li>SOS y SOE</li><li>Espacios ganados</li><li>Plan diario, Alcance y Metas</li><li>Asignar motivos</li><li>Pendientes y WhatsApp</li><li>Informe mensual</li><li>Rutero y ubicación</li><li>Cargar bases (administrador)</li><li>Equipo ECM y Catálogo de marcas</li><li>Pesos, metas y configuración</li><li>Usuarios, permisos y motivos</li><li>Accesos y movimiento</li><li>Cómo se calcula el puntaje</li><li>Exportar información</li><li>Problemas frecuentes</li><li>Buenas prácticas</li></ol></div>
+
+<h2>1. Qué es la plataforma</h2>
+<p>Reúne en un solo sitio web seguro lo que antes estaba en los sistemas de Apps Script: el control de <b>visitas y tareas</b> de los mercaderistas (ECM/BDR) y el análisis de <b>SOS</b> (share de percha) y <b>SOE</b> (share de espacios). Cada persona ve únicamente la información que le corresponde según su tipo de usuario.</p>
+<p>Funciona desde el navegador (computador o celular), sin instalar nada. No requiere correo electrónico: se ingresa con un <b>código de usuario</b>.</p>
+
+<h2>2. Ingreso y cuenta</h2>
+<ol><li>Abre el sitio de la plataforma.</li><li>En <b>Usuario (código)</b> escribe tu código, por ejemplo <code>admin</code> o <code>ecm035</code>. Si escribes un correo, se usa solo lo anterior a la arroba.</li><li>Escribe tu <b>contraseña</b> y pulsa <b>Entrar</b>.</li></ol>
+<p>Para cambiar tu contraseña usa la opción de cambio de clave del panel lateral (pide la clave actual y la nueva). Para salir usa <b>Salir</b>. El botón <b>Tema claro / oscuro</b> cambia la apariencia.</p>
+<div class="nota"><b>Si no puedes entrar:</b> «Usuario o contraseña incorrectos» significa que el código o la clave no coinciden; «Tu usuario no está activo» significa que el administrador lo desactivó; «Demasiados intentos» pide esperar unos minutos. Cualquier otro caso, avisa al administrador.</div>
+
+<h2>3. Tipos de usuario y qué ve cada uno</h2>
+<table><tr><th>Tipo</th><th>Datos que ve</th><th>Qué puede hacer</th></tr>
+<tr><td><b>Administrador</b></td><td>Todo</td><td>Todo, incluida la <b>carga de bases</b> (exclusiva), usuarios, permisos, motivos, configuración y accesos.</td></tr>
+<tr><td><b>Gerencia</b></td><td>Todos los datos; en «Datos» solo ve Equipo ECM</td><td>Analiza y exporta. No carga bases.</td></tr>
+<tr><td><b>Supervisor</b></td><td>Su equipo (o todos los equipos si no tiene nombre de supervisor asignado); puede estar limitado a regiones</td><td>Asigna motivos y revisa según sus permisos.</td></tr>
+<tr><td><b>Asesor / ECM</b></td><td>Solo sus propios datos</td><td>Ve su desempeño y registra justificaciones si tiene el permiso.</td></tr></table>
+<p>El administrador puede crear tipos de usuario adicionales (por ejemplo «Analista») y definir pantalla por pantalla, e incluso pestaña por pestaña, qué se ve y qué se puede editar. El menú lateral solo muestra lo que tu tipo permite.</p>
+
+<h2>4. Cómo moverse</h2>
+<ul><li><b>Menú lateral</b> agrupado en Análisis, Share de góndola, Gestión, Datos y Sistema. En pantallas anchas (Asignar motivos) se oculta solo para dar espacio; el botón de tres líneas lo vuelve a mostrar.</li>
+<li>Al abrir una pantalla con varias pestañas, estas aparecen como <b>sub botones</b> debajo del nombre en el menú. Se pueden plegar con la flecha.</li>
+<li><b>Filtros</b> en la parte superior de cada pantalla: fechas, supervisor, ECM, categoría, etc. Los de selección múltiple permiten marcar varias opciones. En el celular los filtros se pliegan tras el botón «Filtros».</li>
+<li>Las tablas tienen <b>paginación</b>, orden por columna y botones <b>Excel / PNG / PDF</b>.</li></ul>
+
+<h2>5. Dashboard</h2>
+<p>Vista general del mes elegido: efectividad de visitas y tareas, SOS, SOE, tareas de equipo de frío y puntaje final por ECM y por supervisor, comparados contra las metas. Cambia el <b>Mes</b> en la parte superior para ver otro período.</p>
+
+<h2>6. Visitas y Tareas</h2>
+<p>Dos pantallas gemelas, con las mismas pestañas principales:</p>
+<ul><li><b>Resumen / dashboard:</b> totales, efectividad, tendencia diaria y por semana, ranking por supervisor y ECM.</li>
+<li><b>Categorías:</b> en visitas <i>Efectiva, Perdida, Fuera de rango, Menos de 2 minutos</i>; en tareas <i>Efectiva (E), No efectiva (M), Justificada (F), Pendiente (P)</i>.</li>
+<li><b>Informe de motivos:</b> motivos y responsables de lo no efectivo.</li>
+<li><b>Registro y justificación:</b> el mismo módulo de «Asignar motivos», embebido.</li>
+<li><b>Calidad y duración</b> (visitas) y <b>Pilares y frío</b> (tareas).</li>
+<li>Exportaciones a Excel, PDF y PowerPoint.</li></ul>
+<div class="ok"><b>Efectividad de una visita:</b> visita realizada, dentro del rango del PDV y con duración suficiente (mínimo configurable, 2 minutos por defecto).</div>
+
+<h2>7. Auditoría de justificaciones</h2>
+<p>Para supervisión, gerencia y administración. Pestañas: <b>Motivos y responsable</b>, <b>Evolución</b>, <b>Reincidencia por motivo</b>, <b>Para revisar</b> (cola con banderas, donde se aprueba o rectifica), <b>Observaciones repetidas</b>, <b>Avance por supervisor</b> e <b>Historial de cambios</b> (quién cambió qué y cuándo, en lenguaje claro; solo gerencia y administración).</p>
+
+<h2>8. SOS y SOE</h2>
+<p><b>SOS</b> mide la participación de las marcas CN en la percha; <b>SOE</b> mide los espacios (bandeja de frío, bandeja seca y rumas).</p>
+<ul><li><b>Resumen semanal:</b> navega con las flechas ‹ › entre semanas. Muestra el share de la semana contra la anterior, PDV bajo la meta, tendencia, espacios ganados y metas de la semana. Permite copiar el resumen e imprimirlo.</li>
+<li><b>Evolución, SOS · percha, SOE · espacios, Segmentos y marcas, Productos (SKU), PDV, Análisis, Alertas, Detalle</b> (editable por quien tenga el permiso «Corregir SOS y SOE»).</li></ul>
+<div class="nota"><b>Reglas heredadas del sistema anterior:</b> las semanas empiezan el <b>miércoles</b> y terminan el martes; las encuestas de <b>lunes y martes no cuentan</b>; si un PDV tiene varias encuestas en la semana, vale la <b>más reciente</b>; los PDV excluidos (configuración) no se consideran. Por eso la semana del 11 al 17 muestra datos del 11 al 15.</div>
+
+<h2>9. Espacios ganados</h2>
+<p>Registro de caras y rumas ganadas en percha, bandeja de frío, bandeja seca y ruma, con sus fotos y observaciones. Se alimenta del archivo «Respuestas de encuestas» o por captura manual (permiso «Registrar y editar espacios ganados»).</p>
+
+<h2>10. Plan diario, Alcance y Metas</h2>
+<ul><li><b>Plan diario:</b> calcula cuántos PDV y visitas debe cubrir cada ECM por día para llegar a la meta del período.</li>
+<li><b>Alcance de metas:</b> avance real por ECM y por día contra el plan.</li>
+<li><b>Metas y alcance:</b> crear y editar metas por período (semana o mes), modo, valor, regiones y responsable. Las metas personalizadas tienen prioridad sobre las metas por defecto.</li></ul>
+
+<h2>11. Asignar motivos</h2>
+<p>Pantalla de trabajo diario para justificar visitas y tareas no efectivas.</p>
+<ol><li>Elige <b>Visitas</b> o <b>Tareas</b>. Al entrar, el estado siempre aparece en <b>Pendientes</b>.</li>
+<li>Filtra por fechas, categoría, supervisor, ECM, duración o texto. Las tarjetas superiores (Pendientes, En gestión, Justificadas con foto / Involves, Justificadas sin foto) también filtran al pulsarlas.</li>
+<li>Marca los registros (o «Seleccionar los filtrados»), elige el <b>motivo</b>, escribe una observación opcional y pulsa <b>Aplicar a seleccionados</b>.</li>
+<li>Pulsa <b>Guardar cambios</b> en la barra inferior: nada queda guardado hasta ese paso. <b>Descartar</b> cancela.</li></ol>
+<p>Herramientas adicionales: <b>💡 motivos sugeridos</b> por palabras clave de la observación; <b>Revisar y replicar</b> casos que repiten uno ya justificado; <b>Una foto para todos</b>; <b>📎 enlaces de Involves</b>; <b>Marcar «en gestión»</b> / <b>Devolver a pendientes</b>; <b>WhatsApp a los ECM</b>. La pestaña <b>PDV reincidentes</b> lista clientes con varias fallas, y <b>Justificaciones registradas</b> muestra y exporta lo ya hecho, con su historial.</p>
+<div class="nota">Las fotos deben ser JPG, PNG o WebP de máximo 2 MB. Se guardan en un espacio privado y se abren con enlaces temporales.</div>
+
+<h2>12. Pendientes y WhatsApp</h2>
+<p>Lista por ECM de lo que sigue sin justificar, con mensaje listo para enviar por WhatsApp. Al enviarlo, el registro pasa a «en gestión».</p>
+
+<h2>13. Informe mensual</h2>
+<p>Resumen del mes por ECM y supervisor con puntaje, listo para exportar o presentar.</p>
+
+<h2>14. Rutero y ubicación</h2>
+<p>Consulta del rutero (PDV asignados a cada ECM, región, cadena) y de las coordenadas registradas de los PDV.</p>
+
+<h2>15. Cargar bases (solo administrador)</h2>
+<p>Pantalla <b>Datos → Cargar bases</b>. Se pueden elegir varios archivos a la vez (.xlsx, .xls o .csv); la plataforma reconoce cada uno por sus encabezados:</p>
+<table><tr><th>Archivo</th><th>Cómo se reconoce</th><th>Qué alimenta</th></tr>
+<tr><td>Visitas</td><td>Columna <code>VISIT_DATE</code></td><td>Visitas</td></tr>
+<tr><td>Tareas</td><td>Columna <code>Estado_Tarea</code></td><td>Tareas</td></tr>
+<tr><td>Rutero</td><td>Cliente SAP + Nombre cliente</td><td>Rutero</td></tr>
+<tr><td>Equipo ECM</td><td>ECM + Teléfono</td><td>Mercaderistas</td></tr>
+<tr><td>Encuestas SOS/SOE</td><td>Descripción pregunta + Respuesta + Código cliente</td><td>SOS y SOE</td></tr>
+<tr><td>Espacios ganados / enlaces</td><td>Perfil del PDV + Empleado</td><td>Espacios ganados y enlaces de Involves</td></tr>
+<tr><td>Metas</td><td>Encabezados de metas</td><td>Metas</td></tr></table>
+<h3>Modos de carga (visitas y tareas)</h3>
+<ul><li><b>Actualizar:</b> agrega lo nuevo y actualiza lo que cambió, sin borrar nada.</li><li><b>Reemplazar rango:</b> borra las fechas del archivo y las vuelve a cargar.</li><li><b>Reemplazar todo:</b> deja solo lo del archivo.</li></ul>
+<p>Al terminar aparece el <b>resultado de la última carga</b> (nuevas, actualizadas, sin cambios, omitidas). Si algo falla, se muestra un panel de error que permanece en pantalla con la explicación.</p>
+<div class="ok"><b>Consejos:</b> sube primero Rutero y Equipo ECM; luego visitas y tareas; por último encuestas, espacios ganados y enlaces. Después de cargar tareas, ve a <b>Pesos, metas y configuración</b> y pulsa <b>Recalcular</b> para las tareas de equipo de frío. Los archivos CSV con fechas día/mes se leen correctamente.</div>
+
+<h2>16. Equipo ECM y Catálogo de marcas</h2>
+<ul><li><b>Equipo ECM:</b> relación de cada ECM/BDR con su supervisor, región y teléfono. Editable por quien tenga el permiso correspondiente.</li><li><b>Catálogo de marcas:</b> clasifica cada pregunta de las encuestas en grupo (CN, competencia, EXCLUIR), tipo (PERCHA, RUMA, BANDEJA FRÍO, BANDEJA SECO), marca y producto. Las preguntas nuevas se clasifican solas; revisa las que quedan «sin clasificar».</li></ul>
+
+<h2>17. Pesos, metas y configuración</h2>
+<ul><li><b>Pesos del puntaje:</b> 20 % visitas, 30 % tareas, 30 % tareas de equipo de frío, 10 % SOS, 10 % SOE (deben sumar 100).</li><li><b>Metas por defecto:</b> visitas, tareas, frío, SOS y SOE.</li><li><b>Semana operativa:</b> día en que empieza la semana (miércoles por defecto).</li><li><b>PDV excluidos</b> de SOS y SOE; <b>expresión de equipo de frío</b> (por defecto COOLER, ESPACIO FRÍO o NEVERA); fallas mínimas para reincidencia y duración mínima de visita; título de la plataforma.</li></ul>
+
+<h2>18. Usuarios, permisos y motivos</h2>
+<ul><li><b>Usuarios:</b> crear (código, nombre, tipo, código ECM, supervisor, regiones), cambiar clave, activar o desactivar.</li><li><b>Tipos de usuario y permisos:</b> crear tipos y marcar qué pantallas y pestañas ve y qué acciones puede hacer: cargar bases, editar equipo ECM, catálogo, metas, justificar, revisar, corregir SOS/SOE, registrar espacios ganados. Los tipos base (admin, gerencia, supervisor, asesor) definen el alcance de los datos.</li><li><b>Catálogo de motivos:</b> cada motivo tiene un responsable; <b>CN no penaliza</b>, cualquier otro (por ejemplo SGF) sí penaliza. Se activan, desactivan o crean nuevos.</li></ul>
+
+<h2>19. Accesos y movimiento (solo administrador)</h2>
+<p>En <b>Sistema → Accesos y movimiento</b>, con períodos de 24 horas, 3 o 7 días:</p>
+<ul><li><b>Resumen por usuario:</b> último acceso, accesos, días activos, pantallas vistas y cambios; avisa quiénes no han entrado.</li><li><b>Accesos:</b> cada ingreso, sesión retomada y pantalla visitada con fecha, usuario y dispositivo; filtro por usuario.</li><li><b>Movimiento:</b> cambios hechos en la plataforma, con quién y el detalle.</li></ul>
+<p>Los accesos se registran desde la publicación de esta función.</p>
+
+<h2>20. Cómo se calcula el puntaje</h2>
+<p>Cada componente se compara con su meta y se pondera:</p>
+<table><tr><th>Componente</th><th>Peso</th><th>Qué mide</th></tr><tr><td>Visitas</td><td>20 %</td><td>Visitas efectivas ÷ programadas</td></tr><tr><td>Tareas</td><td>30 %</td><td>Tareas efectivas ÷ total (las justificadas válidas no penalizan)</td></tr><tr><td>Tareas de frío</td><td>30 %</td><td>Lo mismo, solo tareas de equipo de frío</td></tr><tr><td>SOS</td><td>10 %</td><td>Share de percha CN frente a su meta</td></tr><tr><td>SOE</td><td>10 %</td><td>Share de espacios CN frente a su meta</td></tr></table>
+<p>La efectividad ajustada solo cuenta los motivos ya asignados; por eso conviene justificar antes de cerrar el período.</p>
+
+<h2>21. Exportar información</h2>
+<p>Las tablas exportan a <b>Excel</b>, <b>PNG</b> y <b>PDF</b>. Visitas y Tareas además generan <b>PowerPoint</b>. El resumen semanal de SOS/SOE se puede copiar o imprimir. Las exportaciones respetan los filtros activos.</p>
+
+<h2>22. Problemas frecuentes</h2>
+<table><tr><th>Situación</th><th>Qué hacer</th></tr>
+<tr><td>La pantalla no muestra los cambios recientes</td><td>Recarga con <b>Ctrl + F5</b>.</td></tr>
+<tr><td>«No hay filas válidas» al subir un archivo</td><td>Verifica que sea el reporte original (encabezados intactos) y que las fechas existan; escribe al administrador si persiste.</td></tr>
+<tr><td>Una semana muestra pocos días</td><td>Recuerda que lunes y martes no cuentan en SOS/SOE y que la semana empieza el miércoles.</td></tr>
+<tr><td>No veo un menú</td><td>Tu tipo de usuario no tiene ese permiso; pídelo al administrador.</td></tr>
+<tr><td>Un ECM no aparece</td><td>Debe estar en Equipo ECM y en el rutero; revisa su código.</td></tr>
+<tr><td>Las fotos no suben</td><td>Usa JPG, PNG o WebP de hasta 2 MB.</td></tr>
+<tr><td>Mensaje de demasiados intentos</td><td>Espera unos minutos antes de volver a ingresar.</td></tr></table>
+
+<h2>23. Buenas prácticas</h2>
+<ul><li>Cargar las bases siempre en el mismo orden y con el reporte original sin modificar encabezados.</li><li>Justificar diariamente, no a fin de mes.</li><li>No compartir contraseñas; cada persona usa su código.</li><li>Cambiar la clave inicial en el primer ingreso.</li><li>Revisar semanalmente el panel de Accesos y movimiento y los usuarios inactivos.</li></ul>
+</body></html>

@@ -1,0 +1,169 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Manual técnico · Desempeño comercial</title><link rel="stylesheet" href="estilo.css"></head><body>
+<div class="portada"><h1>Manual técnico</h1><div class="sub">Plataforma de desempeño comercial CN<br>Arquitectura · Base de datos · Seguridad · Operación</div>
+<div class="meta">Versión 1.0 · noviembre de 2026<br>Repositorio: github.com/djdelgadovalverde-beep/cn · Proyecto Supabase: iizebvjhmpglgsunmtog (sa-east-1)</div></div>
+
+<div class="ind"><h2>Contenido</h2><ol><li>Visión general</li><li>Arquitectura</li><li>Estructura del repositorio</li><li>Frontend</li><li>Base de datos</li><li>Seguridad y RLS</li><li>Autenticación y usuarios</li><li>Almacenamiento de fotos</li><li>Pipeline de carga de bases</li><li>Reglas de negocio</li><li>Rendimiento</li><li>Pruebas</li><li>Publicación y despliegue</li><li>Operación y mantenimiento</li><li>Resolución de problemas</li><li>Pendientes y mejoras</li></ol></div>
+
+<h2>1. Visión general</h2>
+<p>Reemplaza dos sistemas de Google Apps Script (visitas/tareas y SOS/SOE) por una aplicación web de costo cero: un <b>sitio estático</b> (HTML + JavaScript puro, sin compilación) y <b>Supabase</b> (PostgreSQL con RLS, Auth, Storage y una Edge Function). Se publica en GitHub Pages.</p>
+<table><tr><th>Capa</th><th>Tecnología</th></tr><tr><td>Interfaz</td><td>SPA en JavaScript vanilla, CSS propio, sin framework ni bundler</td></tr><tr><td>Datos</td><td>PostgreSQL (Supabase) con funciones SQL y políticas RLS</td></tr><tr><td>Autenticación</td><td>Supabase Auth, usuario + contraseña, código → <code>codigo@cn.app</code></td></tr><tr><td>Archivos</td><td>Supabase Storage, bucket privado <code>evidencias</code></td></tr><tr><td>Funciones de servidor</td><td>Edge Function <code>admin-users</code> (Deno/TypeScript)</td></tr><tr><td>Librerías</td><td>supabase-js, SheetJS (xlsx), ExcelJS, jsPDF, html2canvas, PptxGenJS (CDN)</td></tr><tr><td>Hosting</td><td>GitHub Pages (flujo Actions); alternativa Cloudflare Pages</td></tr><tr><td>Pruebas</td><td>Playwright con Supabase simulado en memoria</td></tr></table>
+
+<h2>2. Arquitectura</h2>
+<pre>Navegador (SPA estática)  ──HTTPS──►  Supabase
+  web/*.js                              ├─ Auth (JWT)
+  clave pública (anon)                  ├─ PostgREST  ──► tablas con RLS + RPC (funciones SQL)
+                                        ├─ Storage    ──► bucket privado «evidencias»
+                                        └─ Edge Function admin-users (service role, solo admin)
+GitHub (main) ──Actions──► GitHub Pages (publica web/)</pre>
+<p>No existe servidor propio. Toda la lógica de acceso reside en la base: el navegador usa la clave <b>anon</b> (pública por diseño) y el JWT del usuario; las políticas RLS deciden qué filas ve y modifica cada quien. La clave de servicio nunca llega al navegador.</p>
+
+<h2>3. Estructura del repositorio</h2>
+<table><tr><th>Ruta</th><th>Contenido</th></tr>
+<tr><td><code>web/index.html</code></td><td>Orden de carga de scripts</td></tr><tr><td><code>web/config.js</code></td><td>URL y clave anon de Supabase</td></tr>
+<tr><td><code>web/app.js</code></td><td>Sesión, login, menú, permisos (<code>veMod</code>, <code>CN.tabOk</code>, <code>CN.puede</code>), enrutado por <code>#hash</code>, registro de accesos</td></tr>
+<tr><td><code>web/viz.js</code>, <code>export.js</code></td><td>Gráficos, tablas con paginación, selección múltiple, exportación Excel/PNG/PDF</td></tr>
+<tr><td><code>web/carga.js</code>, <code>xlsx_stream.js</code>, <code>fase2.js</code></td><td>Carga de bases (detección, mapeo, lectura en flujo de .xlsx grandes), encuestas, espacios ganados</td></tr>
+<tr><td><code>web/an_vt.js</code>, <code>an_vt2.js</code></td><td>Visitas y Tareas</td></tr><tr><td><code>web/an_aud.js</code>, <code>bitacora.js</code></td><td>Auditoría e historial legible</td></tr>
+<tr><td><code>web/an_share*.js</code></td><td>SOS/SOE</td></tr><tr><td><code>web/an_metas.js</code>, <code>plan.js</code>, <code>plan_ui.js</code></td><td>Metas, motor del plan, alcance</td></tr>
+<tr><td><code>web/registro.js</code></td><td>Asignar motivos</td></tr><tr><td><code>web/admin2.js</code>, <code>config2.js</code>, <code>accesos.js</code></td><td>Usuarios, permisos, motivos, configuración, accesos</td></tr>
+<tr><td><code>supabase/</code></td><td><code>schema*.sql</code>, <code>NOTAS.md</code>, <code>functions/admin-users</code>, <code>migracion/</code></td></tr>
+<tr><td><code>tests/</code></td><td>Servidor local, Supabase simulado (<code>fake.js</code>) y pruebas Playwright</td></tr>
+<tr><td><code>.github/workflows/</code></td><td><code>pages.yml</code> (GitHub Pages), <code>cloudflare-pages.yml</code></td></tr>
+<tr><td><code>docs/</code></td><td>Este manual y el manual de uso</td></tr></table>
+
+<h2>4. Frontend</h2>
+<h3>4.1 Modelo de módulos</h3>
+<p>Cada archivo es una IIFE que registra vistas en objetos globales: <code>NAV[clave] = [titulo, roles]</code>, <code>VIEWS[clave] = async function</code>, <code>GROUPS</code> (agrupación del menú) y <code>CN.sub[clave]</code> (pestañas laterales). El estado de sesión vive en <code>S</code> (<code>S.me</code>, <code>S.cfg</code>, <code>S.motivos</code>, <code>S.ecmMap</code>, <code>S.roles</code>).</p>
+<h3>4.2 Enrutado y permisos</h3>
+<p>La ruta es el hash (<code>#visitas</code>). <code>route()</code> valida con <code>veMod(clave)</code>, dibuja el menú y ejecuta la vista. Permisos: <code>veMod</code> (módulo visible), <code>CN.tabOk(mod, pestaña)</code> (pestaña visible) y <code>CN.puede(capacidad)</code> (acción permitida). El administrador pasa todos los controles; el control real está en la base (RLS), la interfaz solo oculta.</p>
+<h3>4.3 Utilidades comunes</h3>
+<ul><li><code>esc</code>, <code>norm</code> (sin tildes, mayúsculas), <code>key</code>, <code>g(fila, ...nombres)</code> (lee una columna por alias), <code>TXT</code>, <code>toISO</code> (acepta Date, ISO, dd/mm/aaaa y números de serie de Excel).</li>
+<li><code>CN.fetchPar</code> (lectura paginada en paralelo), <code>CN.conReintento</code> (reintentos ante fallos de red), <code>safeUrl</code> (valida enlaces).</li>
+<li><code>VZ</code>: <code>kpi</code>, <code>table</code>, <code>hbar</code>, <code>stack</code>, <code>line</code>, <code>msel</code>, <code>tabs</code> y exportadores.</li></ul>
+<h3>4.4 Convenciones</h3>
+<p>Accesibilidad (etiquetas, enlace «saltar al contenido», contraste), diseño adaptable a celular, tema claro/oscuro, y todo texto dinámico pasa por <code>esc()</code> para evitar XSS.</p>
+
+<h2>5. Base de datos</h2>
+<h3>5.1 Tablas principales</h3>
+<table><tr><th>Tabla</th><th>Contenido</th></tr>
+<tr><td><code>profiles</code></td><td>Perfil por usuario: <code>usuario</code>, <code>nombre</code>, <code>rol</code> (clave del tipo), <code>ecm_code</code>, <code>supervisor</code>, <code>regiones</code>, <code>activo</code></td></tr>
+<tr><td><code>roles</code></td><td>Tipos de usuario: <code>clave</code>, <code>nombre</code>, <code>base</code> (admin/gerencia/supervisor/asesor), <code>ver</code> (pantallas y <code>mod:pestaña</code>), <code>editar</code> (capacidades), <code>sistema</code></td></tr>
+<tr><td><code>visitas</code></td><td>Una fila por visita; id <code>V|fecha|cliente|BDR(#n)</code>; estado, categoría, programadas, región, supervisor, ecm</td></tr>
+<tr><td><code>tareas</code></td><td>Id <code>T|fecha|cliente|hash(descripción)(#n)</code>; categoría E/M/F/P, <code>es_frio</code>, URLs de imagen/enlace, <code>detalle</code> (jsonb)</td></tr>
+<tr><td><code>share_detalle</code></td><td>SOS/SOE por fecha, PDV, tipo, grupo, marca, SKU y caras</td></tr>
+<tr><td><code>catalogo_share</code></td><td>Clasificación de preguntas de encuesta (clave+encuesta → grupo, tipo, marca)</td></tr>
+<tr><td><code>ganancias</code>, <code>enlaces</code>, <code>ubicaciones</code></td><td>Espacios ganados, enlaces de Involves por visita, coordenadas de PDV</td></tr>
+<tr><td><code>justificaciones</code>, <code>evidencias</code></td><td>Motivo, responsable, estado, observación y fotos por registro</td></tr>
+<tr><td><code>motivos</code>, <code>metas</code>, <code>config</code></td><td>Catálogo de motivos, metas por período, parámetros (pesos, semana, exclusiones…)</td></tr>
+<tr><td><code>rutero</code>, <code>ecm_map</code></td><td>PDV por ECM; equipo de mercaderistas</td></tr>
+<tr><td><code>bitacora</code></td><td>Historial automático de cambios (disparadores)</td></tr>
+<tr><td><code>cargas</code></td><td>Fecha de la última carga por tipo</td></tr>
+<tr><td><code>accesos</code></td><td>Ingresos, sesiones y pantallas (usuario, fecha, evento, vista, agente)</td></tr></table>
+<h3>5.2 Funciones SQL</h3>
+<table><tr><th>Función</th><th>Uso</th></tr>
+<tr><td><code>my_role()</code>, <code>my_ecm()</code>, <code>my_sup()</code>, <code>my_regiones()</code>, <code>region_filtro()</code></td><td>Alcance del usuario autenticado (rol base, ECM, supervisor, regiones)</td></tr>
+<tr><td><code>tiene_permiso(cap)</code></td><td>Capacidad por tipo de usuario; <code>carga</code> solo para <code>profiles.rol = 'admin'</code></td></tr>
+<tr><td><code>share_agg</code>, <code>share_pdv_sem</code>, <code>share_opts</code>, <code>share_ultima_fecha</code></td><td>Agregaciones de SOS/SOE por semana operativa y filtros</td></tr>
+<tr><td><code>score_ecm</code></td><td>Puntaje por ECM</td></tr>
+<tr><td><code>plan_pdv_tipo</code>, funciones de opciones de Visitas/Tareas</td><td>Plan diario y filtros</td></tr>
+<tr><td><code>admin_actividad(dias)</code></td><td>Resumen de accesos y cambios (solo admin, <code>SECURITY DEFINER</code>)</td></tr>
+<tr><td><code>trg_bitacora</code>, <code>trg_justificacion</code>, <code>trg_evidencia</code></td><td>Disparadores de historial y consistencia</td></tr></table>
+<h3>5.3 Migraciones</h3>
+<p>La fuente de verdad es el proyecto Supabase; los <code>schema*.sql</code> son la base inicial y se aplicaron más de 25 migraciones (permisos por región y submenú, tipos de usuario, rendimiento RLS, análisis SOS/SOE, plan, accesos). Para versionarlo completo:</p>
+<pre>supabase login
+supabase link --project-ref iizebvjhmpglgsunmtog
+supabase db pull          # crea supabase/migrations/&lt;fecha&gt;_remote_schema.sql
+supabase migration new nombre_del_cambio
+supabase db push</pre>
+
+<h2>6. Seguridad y RLS</h2>
+<ul><li><b>Información pública:</b> el código del sitio (repositorio público), la URL de Supabase y la clave anon. Ningún dato operativo es público: sin sesión, las políticas RLS no devuelven filas.</li>
+<li><b>Alcance por rol base</b> (<code>my_role()</code>): admin y gerencia ven todo; supervisor ve su equipo (todos si no tiene nombre asignado) y se limita por regiones; asesor solo su ECM.</li>
+<li><b>Permisos por tipo</b> (<code>roles.ver</code> / <code>roles.editar</code>): capacidades <code>carga, ecm, catalogo, metas, justificar, revisar, sos_editar, ganancias</code>. <b>Cargar bases es exclusivo del administrador.</b></li>
+<li><b>Reglas del proyecto:</b> toda política usa <code>(select my_role())</code> o <code>(select tiene_permiso('…'))</code> (initplan, se evalúa una vez por consulta); nunca políticas <code>ALL</code> de escritura sobre tablas de lectura masiva (regirían también las lecturas), por eso se separan INSERT/UPDATE/DELETE.</li>
+<li><b>Funciones:</b> ejecución revocada a <code>public</code>/<code>anon</code>; las <code>SECURITY DEFINER</code> verifican el rol internamente y fijan <code>search_path</code>.</li>
+<li><b>Accesos:</b> cada usuario inserta solo sus filas; solo el admin lee y borra.</li>
+<li><b>Auth:</b> registro abierto desactivado y confirmación de correo desactivada (los usuarios los crea el administrador). Pendiente: activar protección de contraseñas filtradas (Authentication → Policies).</li></ul>
+<div class="nota">Si el proveedor Email de Supabase se desactiva, el login falla con <code>422 email_provider_disabled</code>. Mantener: Email habilitado, «Allow new users to sign up» y «Confirm email» apagados.</div>
+
+<h2>7. Autenticación y usuarios</h2>
+<ul><li>El código ingresado se convierte en <code>codigo@cn.app</code> y se autentica con <code>signInWithPassword</code>. No se envían correos.</li>
+<li><code>boot()</code> lee <code>profiles</code>, <code>roles</code>, <code>config</code>, <code>motivos</code> y <code>ecm_map</code>; si el perfil está inactivo, cierra la sesión.</li>
+<li><b>Edge Function <code>admin-users</code>:</b> alta, cambio de clave y baja de usuarios con la clave de servicio, solo si quien llama es administrador. Despliegue: <code>supabase functions deploy admin-users</code>.</li>
+<li>Cada usuario nuevo requiere su fila en <code>profiles</code> (la función la crea junto con el usuario de Auth).</li></ul>
+
+<h2>8. Almacenamiento de fotos</h2>
+<p>Bucket <b>privado</b> <code>evidencias</code>: solo JPG/PNG/WebP de hasta 2 MB; las políticas de Storage limitan escritura y lectura según el rol y el ECM dueño del registro; la interfaz abre las fotos con URL firmadas temporales. Las URL de fotos de Involves (Azure) se guardan como texto y se validan con <code>safeUrl</code>.</p>
+
+<h2>9. Pipeline de carga de bases</h2>
+<ol><li><b>Lectura</b> (<code>leerArchivo</code>): CSV (detecta codificación UTF-8/Windows-1252 y delimitador; se lee <i>sin</i> conversión automática de fechas para respetar día/mes) o Excel con SheetJS (<code>cellDates</code>). Los .xlsx de más de 12 MB (no tareas) usan <code>xlsx_stream.js</code>, un lector en flujo que descomprime y procesa por bloques con barra de progreso.</li>
+<li><b>Detección</b> (<code>detectar</code>): encabezados normalizados (sin tildes, mayúsculas, sin espacios) → tipo: <code>VISITDATE</code>=visitas, <code>ESTADOTAREA</code>=tareas, <code>CLIENTESAP+NOMBRECLIENTE3</code>=rutero, <code>ECM+TELEFONO</code>=equipo, <code>DESCRIPCIONPREGUNTA+RESPUESTA+CODIGOCLIENTE</code>=encuestas, <code>PERFILDELPDV+EMPLEADO</code>=espacios/enlaces.</li>
+<li><b>Mapeo</b> (<code>mapVis</code>, <code>mapTar</code>): normaliza fechas con <code>toISO</code> (incluye números de serie de Excel, p. ej. 46327 = 2026-11-01), construye el id determinista y clasifica. Filas sin fecha, cliente o ECM se descartan y se cuentan como omitidas.</li>
+<li><b>Escritura</b> (<code>cargarVT</code>): modos <i>actualizar</i> (upsert por id, compara columnas para contar nuevas/actualizadas/sin cambios), <i>rango</i> (borra por día y recarga) y <i>todo</i>. Lotes con reintentos.</li>
+<li><b>Resultado:</b> resumen de la carga, registro en <code>cargas</code> y panel de error persistente (<code>ERRCARGA</code>) si algo falla.</li></ol>
+<p>Identificadores idénticos a los del sistema original: <code>V|fecha|cliente|BDR</code> y <code>T|fecha|cliente|hash</code> (hash djb2 en base 36 de la descripción); los duplicados reciben sufijo <code>#n</code>.</p>
+
+<h2>10. Reglas de negocio</h2>
+<table><tr><th>Regla</th><th>Detalle</th></tr>
+<tr><td>Categoría de tarea</td><td>VALID+FINISHED → E; INVALID+FINISHED → M; JUSTIFIED → F; AVAILABLE → P; FINISHED → M; otro → P</td></tr>
+<tr><td>Tarea de frío</td><td>Expresión <code>COOLER|ESPACIO FRIO|NEVERA</code> sobre pilar + descripción normalizados (configurable; se recalcula con «Recalcular»)</td></tr>
+<tr><td>Semana operativa</td><td><code>config.semana_inicio</code> (3 = miércoles); inicio de semana = fecha − ((dow − inicio + 7) mod 7)</td></tr>
+<tr><td>Encuestas SOS/SOE</td><td>Se excluyen lunes y martes (día operativo &gt; 4); una visita por PDV, tipo de encuesta y semana (la más reciente); PDV de <code>excluir_pdv</code> fuera; solo valores &gt; 0</td></tr>
+<tr><td>Puntaje</td><td>20 % visitas, 30 % tareas, 30 % tareas de frío, 10 % SOS, 10 % SOE (pesos en <code>config</code>), contra metas por defecto o personalizadas (<code>metas</code>)</td></tr>
+<tr><td>Motivos</td><td>Responsable CN no penaliza; otro responsable penaliza</td></tr></table>
+
+<h2>11. Rendimiento</h2>
+<ul><li>Agregaciones en SQL (<code>share_agg</code> con CTE <code>MATERIALIZED</code>) en lugar de traer filas al navegador; se corrigió un caso de 39 s.</li>
+<li>Políticas con <i>initplan</i> y políticas de escritura separadas de las de lectura.</li>
+<li>Índices por fecha y por usuario (también en <code>accesos</code>).</li>
+<li>Lecturas paginadas y paralelas (<code>fetchPar</code>) con reintento; renderizado de tablas por páginas.</li>
+<li>Lector en flujo para .xlsx grandes (evita agotar memoria del navegador).</li></ul>
+
+<h2>12. Pruebas</h2>
+<pre>npm install
+npx playwright install chromium
+npm run check        # sintaxis de web/*.js
+npm test             # dup.js (filtros duplicados) + run.js (todas las pantallas por rol) + reg.js
+npm run test:todo    # además vt2.js (exportaciones) y pl.js (plan/alcance)
+node tests/subir-real.js ruta/archivo.xlsx   # sube un archivo real contra el Supabase simulado</pre>
+<p>Las pruebas usan <code>tests/fake.js</code>, una simulación en memoria del cliente Supabase (tablas, filtros, RPC), por lo que nunca tocan datos reales. Resultados y capturas en <code>tests/out/</code>. Auditorías extra: <code>aud.js</code> (accesibilidad), <code>lay.js</code> (maquetación), <code>sv.js</code> y <code>xlsx-grande.js</code>.</p>
+
+<h2>13. Publicación y despliegue</h2>
+<table><tr><th>Opción</th><th>Cómo</th></tr>
+<tr><td>GitHub Pages (en uso)</td><td><code>.github/workflows/pages.yml</code> publica <code>web/</code> en cada push a <code>main</code> que toque <code>web/**</code>. Requiere Settings → Pages → Source: GitHub Actions. URL: <code>https://djdelgadovalverde-beep.github.io/cn/</code></td></tr>
+<tr><td>Cloudflare Pages</td><td>Build vacío, salida <code>web</code>; o <code>npm run deploy</code> (wrangler)</td></tr>
+<tr><td>Netlify</td><td>Solo manual (<code>netlify.toml</code> evita compilaciones automáticas)</td></tr></table>
+<h3>Flujo de trabajo</h3>
+<pre>git checkout -b mejora/nombre
+# editar en VS Code, probar con npm run dev y npm test
+git add -A &amp;&amp; git commit -m "Descripción"
+git push -u origin mejora/nombre      # Pull Request
+# o, para publicar directo:
+git push origin main</pre>
+<p>Para ver el sitio local: <code>npm run dev</code> (puerto 5173). Tras publicar, los usuarios deben recargar con Ctrl+F5 para evitar la copia en caché.</p>
+
+<h2>14. Operación y mantenimiento</h2>
+<table><tr><th>Tarea</th><th>Cómo</th></tr>
+<tr><td>Crear usuario</td><td>Sistema → Usuarios → Nuevo (usa la Edge Function)</td></tr>
+<tr><td>Ajustar pesos, metas, semana, exclusiones</td><td>Sistema → Pesos, metas y configuración (tabla <code>config</code>)</td></tr>
+<tr><td>Recalcular frío</td><td>Botón «Recalcular» tras cambiar la expresión o cargar tareas</td></tr>
+<tr><td>Revisar actividad</td><td>Sistema → Accesos y movimiento</td></tr>
+<tr><td>Respaldo</td><td>Plan gratuito de Supabase: exportar periódicamente tablas clave (Table Editor o <code>pg_dump</code>); conservar los archivos origen de las cargas</td></tr>
+<tr><td>Revisar salud</td><td>Supabase → Advisors (seguridad y rendimiento) y Logs de Auth/API</td></tr>
+<tr><td>Limpieza de accesos</td><td>El admin puede borrar registros antiguos de <code>accesos</code>; la tabla crece una fila por pantalla vista</td></tr></table>
+<div class="nota">El plan gratuito de Supabase pausa proyectos inactivos y limita almacenamiento (500 MB de base) y ancho de banda. Vigilar el tamaño de <code>share_detalle</code> y <code>bitacora</code>, las tablas más grandes.</div>
+
+<h2>15. Resolución de problemas</h2>
+<table><tr><th>Síntoma</th><th>Causa probable y solución</th></tr>
+<tr><td>Nadie puede ingresar (422 <code>email_provider_disabled</code>)</td><td>Reactivar Email en Authentication → Sign In / Providers</td></tr>
+<tr><td>Usuario sin acceso a nada</td><td>Falta fila en <code>profiles</code> o <code>activo = false</code></td></tr>
+<tr><td>Carga de tareas: «no hay filas válidas»</td><td>Fechas como número de serie de Excel (corregido en <code>toISO</code>); verificar columnas <code>SystemModstamp</code>, <code>CodigoCliente</code>, <code>SectorDesarrollo</code></td></tr>
+<tr><td>Fechas con día y mes cambiados</td><td>CSV leído con <code>cellDates</code> (SheetJS usa mes/día); corregido leyendo CSV como texto. Para datos ya cargados, intercambiar día y mes por SQL</td></tr>
+<tr><td>Consultas con «statement timeout»</td><td>Revisar plan de la función (usar CTE <code>MATERIALIZED</code>, evitar <code>auth.uid()</code> sin <code>select</code>)</td></tr>
+<tr><td>Pages no se actualiza</td><td>Revisar Actions; si hay «Found 0 artifact(s)», volver a ejecutar el flujo; eliminar flujos duplicados (jekyll/static)</td></tr>
+<tr><td>Cambios no visibles</td><td>Ctrl+F5 (caché del navegador)</td></tr>
+<tr><td>Archivo grande se cuelga</td><td>Se procesa con el lector en flujo (&gt; 12 MB); si falla, dividir el archivo por fechas</td></tr></table>
+
+<h2>16. Pendientes y mejoras</h2>
+<ul><li>Resúmenes diarios por correo.</li><li>Importar el avance del plan por Excel.</li><li>Lámina de Proyección en el PowerPoint.</li><li>«Arrastre» de PDV sin visita en el resumen semanal.</li><li>Fotos en Google Drive (opcional).</li><li><code>supabase db pull</code> para versionar el esquema completo.</li><li>Activar protección contra contraseñas filtradas.</li><li>Evaluar repositorio privado con Cloudflare Pages si se desea ocultar el código.</li></ul>
+</body></html>
