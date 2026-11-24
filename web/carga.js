@@ -209,9 +209,9 @@
   }
 
   /* ---------- rutero (acepta el maestro SAP, el rutero del BI y el informe de punto de venta) ---------- */
-  async function cargarRutero(rows, say) {
+  async function cargarRutero(rows, say, opcion) {
     const first = (r, names) => { for (const n of names) { const v = r[key(n)]; if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim(); } return ''; };
-    const nuevo = {}; let desc = 0;
+    const nuevo = {}, estCol = {}; let desc = 0;
     rows.forEach((r) => {
       const cod = first(r, ['CODIGO', 'CODIGO CLIENTE', 'CODIGOCLIENTE', 'CLIENTE_SAP', 'PERFIL DEL PDV']).replace(/\.0+$/, ''); if (!/^\d{1,12}$/.test(cod)) { desc++; return; }
       const regRaw = first(r, ['REGION', 'MACRORREGIONAL', 'NOMBRE_DIRECCION']);
@@ -219,6 +219,7 @@
         ciudad: first(r, ['CIUDAD']), supervisor: first(r, ['SUPERVISOR']), ecm: ecmNorm(first(r, ['ECM', 'SectorDesarrollo'])), dia_visita: first(r, ['DIA DE VISITA', 'DiaVisitaBDR']),
         subcadena: first(r, ['SUBCADENA', 'TIPOLOGIA']), kam: first(r, ['KAM']), gerencia: first(r, ['GrupoGerencia']), grupo_supervision: first(r, ['GrupoSupervision']),
         semanas: first(r, ['SemanasVisita']), dia_entrega: first(r, ['Dia Entrega']), agrupacion: first(r, ['AGRUPACION']), gestor: first(r, ['GESTOR']) };
+      const ev = norm(first(r, ['ESTADO PDV', 'ESTADO DEL PDV', 'ACTIVO', 'ESTADO', 'STATUS'])); if (ev) { if (/^(INACTIVO|INACTIVE|NO|0|FALSE|BAJA|CERRADO|DESACTIVADO)$/.test(ev)) estCol[cod] = false; else if (/^(ACTIVO|ACTIVE|SI|1|TRUE|ALTA|ACTIVADO)$/.test(ev)) estCol[cod] = true; }
     });
     const cods = Object.keys(nuevo); if (!cods.length) throw new Error('No encontré filas válidas en el rutero (el código debe ser numérico).');
     say('Leyendo rutero actual…');
@@ -231,7 +232,17 @@
       if (!o) { nuevos++; out.push(m); } else if (Object.keys(n).some((k) => (m[k] || '') !== (o[k] || ''))) { actualizados++; out.push(m); }
     });
     for (let i = 0; i < out.length; i += 1000) { say(`Guardando rutero: ${Math.min(i + 1000, out.length)} de ${out.length}…`); const { error } = await sb.from('rutero').upsert(out.slice(i, i + 1000), { onConflict: 'codigo' }); if (error) throw error; }
-    return { tp: 'rut', filas: cods.length, descartadas: desc, nuevas: nuevos, actualizadas: actualizados, iguales: cods.length - nuevos - actualizados };
+    /* activos / inactivos según este rutero: columna Estado/Activo por fila y, si se pide, «rutero completo» (los que no vienen quedan inactivos) */
+    const hoy = new Date().toISOString().slice(0, 10), nota = 'Según rutero del ' + hoy.split('-').reverse().join('/'), ponActivo = new Set(), ponInactivo = new Set();
+    cods.forEach((cd) => { if (estCol[cd] === true) ponActivo.add(cd); else if (estCol[cd] === false) ponInactivo.add(cd); else if (opcion === 'completo') ponActivo.add(cd); });
+    if (opcion === 'completo') Object.keys(act).forEach((cd) => { if (!nuevo[cd]) ponInactivo.add(cd); });
+    const activados = [...ponActivo].filter((cd) => !act[cd] || act[cd].activo === false).length, inactivados = [...ponInactivo].filter((cd) => !act[cd] || act[cd].activo !== false).length;
+    for (const [conj, val] of [[ponActivo, true], [ponInactivo, false]]) {
+      const lista = [...conj]; for (const part of chunks(lista, 300)) { say(`Actualizando estado de PDV (${val ? 'activos' : 'inactivos'})…`);
+        const { error } = await sb.from('rutero').update({ activo: val, estado_manual: true, inactivo_desde: val ? null : hoy, estado_motivo: nota, estado_actualizado: new Date().toISOString() }).in('codigo', part); if (error) throw error; }
+    }
+    const estadoTxt = (ponActivo.size || ponInactivo.size) ? `Según el rutero: ${inactivados} PDV pasaron a inactivos y ${activados} a activos${opcion === 'completo' ? ' (rutero completo: los que no vienen quedan inactivos)' : ' (columna Estado del archivo)'}.` : '';
+    return { tp: 'rut', filas: cods.length, descartadas: desc, nuevas: nuevos, actualizadas: actualizados, iguales: cods.length - nuevos - actualizados, estadoTxt };
   }
 
   /* ---------- ECM (nombre, teléfono, supervisor): una celda vacía no borra lo ya guardado ---------- */
@@ -319,7 +330,7 @@
     ${RES.length ? `<div class="card" style="border-left:4px solid var(--ok)"><h3>Resultado de la última carga</h3>${RES.map(resumenHTML).join('')}</div>` : ''}
     <div class="card"><h2>Cargar archivos</h2><p class="note">Sube uno o varios Excel a la vez: la plataforma reconoce cada uno por sus encabezados (visitas, tareas, rutero, ECM, enlaces de fotos, espacios ganados, encuestas SOS/SOE o metas) y los carga en el orden correcto.</p>
       <div class="bar"><input type="file" id="fl" aria-label="Elegir archivos de Excel o CSV para cargar" accept=".xlsx,.xls,.csv" multiple></div><div id="lista">${lista}</div>
-      ${CARGA.some((c) => !c.err) ? `<div class="bar">${hayVT ? `<label>Cómo cargar visitas y tareas<select id="cmod"><option value="actualizar">Actualizar cambios: edita lo que cambió y agrega lo nuevo (recomendado)</option><option value="rango">Reemplazar las fechas que trae el archivo (borra y vuelve a escribir)</option><option value="todo">Reemplazar toda la base</option></select></label>` : '<span class="note">Se actualiza por código (rutero) o por ECM (nombres y teléfonos); no se borra nada.</span>'}<button class="pri" id="go">Cargar ${CARGA.filter((c) => !c.err).length} archivo(s)</button></div>` : ''}
+      ${CARGA.some((c) => !c.err) ? `<div class="bar">${CARGA.some((c) => !c.err && c.tp === 'rut') ? `<label>Estado de los PDV al subir el rutero<select id="crut"><option value="auto">Normal: solo agrega y actualiza; respeta la columna Estado/Activo si el archivo la trae</option><option value="completo">Rutero completo: los PDV que no vienen pasan a inactivos y los que vienen a activos</option></select></label>` : ''}${hayVT ? `<label>Cómo cargar visitas y tareas<select id="cmod"><option value="actualizar">Actualizar cambios: edita lo que cambió y agrega lo nuevo (recomendado)</option><option value="rango">Reemplazar las fechas que trae el archivo (borra y vuelve a escribir)</option><option value="todo">Reemplazar toda la base</option></select></label>` : '<span class="note">Se actualiza por código (rutero) o por ECM (nombres y teléfonos); no se borra nada.</span>'}<button class="pri" id="go">Cargar ${CARGA.filter((c) => !c.err).length} archivo(s)</button></div>` : ''}
       <p class="note" id="msg"></p></div>
     <div class="card"><h3>Mantenimiento</h3><div class="bar" style="margin:0"><button id="sync">Completar ECM desde las bases</button><button id="prop">Aplicar supervisores de ECM a todas las bases</button></div><p class="note">«Completar» agrega a la tabla ECM los que aparecen en las bases (con el supervisor que traigan, si no tienen uno). «Aplicar» hace que la tabla ECM mande sobre el supervisor de cada archivo.</p></div>`;
     document.querySelectorAll('.nodo').forEach((d) => { const r = RES[+d.dataset.n]; if (r && r.node) d.appendChild(r.node); });
@@ -343,7 +354,7 @@
       for (const tp of orden) for (const c of L.filter((x) => x.tp === tp)) {
         paso = `${NOMBRE[tp]} · ${c.file.name}`; say(`Procesando ${paso}…`); let r;
         if (tp === 'ecm') { r = await cargarEcm(c.rows, say); A = await apoyo(); }
-        else if (tp === 'rut') { r = await cargarRutero(c.rows, say); A = await apoyo(); }
+        else if (tp === 'rut') { r = await cargarRutero(c.rows, say, ($('#crut') || {}).value || 'auto'); A = await apoyo(); }
         else if (tp === 'vis') r = await cargarVT('vis', c.rows, modo, say, A);
         else if (tp === 'tar') {
           let re; try { re = new RegExp(S.cfg.frio_regex || 'FRIO|EQUIPO'); } catch (e) { re = /FRIO|EQUIPO/; }
@@ -354,7 +365,7 @@
         else if (tp === 'enl') r = await cargarEnlaces(c.rows, say);
         else if (tp === 'gan' || tp === 'enc') { const o = document.createElement('div'); await (tp === 'gan' ? CARGAS.ganancias : CARGAS.encuesta).run(c.file, o); r = { tp, node: o, filas: null }; }
         else if (tp === 'meta') { if (!window.CN.cargarMetas) throw new Error('El módulo de metas no está disponible.'); r = await window.CN.cargarMetas(c.rows, say); }
-        RES.push(r);
+        RES.push(r); if (r.estadoTxt) { const o = document.createElement('div'); o.textContent = r.estadoTxt; RES.push({ tp: 'pdv', node: o, filas: null }); }
         await sb.from('cargas').insert({ tipo: tp === 'enc' ? 'enc' : tp, modo: tp === 'vis' || tp === 'tar' ? modo : null, archivo: c.file.name.slice(0, 200), filas: r.filas || null, nuevas: r.nuevas || null, actualizadas: r.actualizadas || null, iguales: r.iguales || null, borradas: r.borradas || null, detalle: { trans: r.trans || null, motivoEfectivas: r.motivoEfectivas || null } });
       }
       if (L.some((x) => ['rut', 'vis', 'tar', 'enc', 'gan'].includes(x.tp))) { /* el estado de los PDV sigue a los datos que se suben */
