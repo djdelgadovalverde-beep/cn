@@ -5,10 +5,13 @@
 (function () {
   const { n: fN } = VZ;
   const ST = { tab: 'alc', rows: [], orig: [], opts: {}, dirty: false, q: '', f: { per: '', cad: '', reg: '', tipo: '', alc: '' }, nuevo: false };
-  const MODO_LABEL = { share: 'Share % (meta de participación)', caras_pdv: 'Caras por PDV', caras_total: 'Caras totales (se reparten)', penetracion: 'Penetración % de locales', ganadas: 'Caras ganadas (espacios ganados)' };
+  const MODO_LABEL = { share: 'Share % (meta de participación)', caras_pdv: 'Caras CN por tienda', caras_total: 'Caras CN generales (se reparten)', penetracion: 'Penetración % de locales', ganadas: 'Caras ganadas (espacios ganados)' };
+  const KIND = { share: 'Share % (meta de participación)', caras: 'Caras CN', penetracion: 'Penetración % de locales', ganadas: 'Caras ganadas (espacios ganados)' };
+  const kindDe = (m) => (m === 'caras_pdv' || m === 'caras_total' ? 'caras' : m);
+  const nivel = (r) => (r.modo === 'caras_pdv' ? 'pdv' : r.modo === 'caras_total' ? 'grupo' : r.modo === 'ganadas' ? (r.base === 'pdv' ? 'pdv' : 'grupo') : r.modo === 'share' ? (r.base === 'grupo' ? 'grupo' : 'pdv') : 'grupo');
   const TIPOS_ED = [['PERCHA', 'Percha'], ['BANDEJA FRÍO', 'Bandeja frío'], ['BANDEJA SECO', 'Bandeja seco'], ['RUMA', 'Ruma']], TLAB = Object.fromEntries(TIPOS_ED);
   const DIMS = [['region', 'Región'], ['cadena', 'Cadena'], ['supervisor', 'Supervisor'], ['ecm', 'ECM (asesor)']];
-  const modosDe = (ts) => (ts[0] === 'PERCHA' ? ['share', 'caras_pdv', 'caras_total', 'ganadas'] : ['share', 'caras_pdv', 'caras_total', 'penetracion', 'ganadas']);
+  const modosDe = (ts) => (ts[0] === 'PERCHA' ? ['share', 'caras', 'ganadas'] : ['share', 'caras', 'penetracion', 'ganadas']);
   const puede = () => (S.me.rol === 'admin' || CN.puede('metas')) && S.me.rol !== 'asesor';
   const puedeEd = () => puede() && (S.me.rol === 'admin' || !((S.me.def && S.me.def.ver) || []).some((k) => String(k).startsWith('metas:')) || CN.tabOk('metas', 'edit'));
   const lista = (v) => String(v || '').split('|').map((x) => x.trim()).filter(Boolean);
@@ -28,10 +31,10 @@
   const goalRule = (g) => {
     const pm = g.modo === 'share' || g.modo === 'penetracion', v = pm ? fp(g.valor, 0) : fN(g.valor), multi = g.tipos.length > 1;
     if (g.modo === 'share') return 'Share de ' + tiposTxt(g.tipos) + ' ≥ ' + v + (g.base === 'grupo' ? ' entre todos los PDV del grupo' : multi ? ' en cada PDV (los tipos suman juntos: da igual si llega por uno o por otro)' : ' en cada PDV');
-    if (g.modo === 'caras_pdv') return v + ' caras CN por PDV' + (multi ? ' entre ' + tiposTxt(g.tipos) : '');
-    if (g.modo === 'caras_total') return v + ' caras CN en total, repartidas entre los PDV' + (multi ? ' (' + tiposTxt(g.tipos) + ')' : '');
-    if (g.modo === 'ganadas') return v + ' caras ganadas (espacios ganados)' + (multi ? ' en ' + tiposTxt(g.tipos) : '');
-    return 'CN en al menos ' + v + ' de los locales (' + tiposTxt(g.tipos) + ')';
+    if (g.modo === 'caras_pdv') return v + ' caras CN por tienda (cada PDV)' + (multi ? ' entre ' + tiposTxt(g.tipos) : '');
+    if (g.modo === 'caras_total') return v + ' caras CN en general (todo el grupo), repartidas entre los PDV' + (multi ? ' (' + tiposTxt(g.tipos) + ')' : '');
+    if (g.modo === 'ganadas') return v + ' caras ganadas (espacios ganados)' + (g.base === 'pdv' ? ' por tienda' : ' entre todo el grupo') + (multi ? ' en ' + tiposTxt(g.tipos) : '');
+    return 'CN en al menos ' + v + ' de los locales del grupo (' + tiposTxt(g.tipos) + ')';
   };
   const perLabel = (m) => (m ? U().semNum(m) : 'Siempre');
   const kindOf = (m) => (!m ? 'all' : /\+$/.test(m) ? 'from' : /-W/.test(m) ? 'week' : 'month');
@@ -59,9 +62,9 @@
     const tiposF = gf('Tipos que se miden juntos', `<select multiple size="4" data-i="${i}" data-f="tipos" aria-label="Tipos que se miden juntos">${TIPOS_ED.map(([v, t]) => `<option value="${esc(v)}" ${r.tipos.includes(v) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select><span class="note">Percha va sola; frío, seco y ruma se pueden combinar.</span>`);
     return `<div class="ge"><div class="ge-h"><input type="text" data-i="${i}" data-f="nombre" value="${esc(r.nombre)}" maxlength="80" aria-label="Nombre de la meta" placeholder="Nombre de la meta (opcional)">${btns(true)}</div>
       <div class="gsec">1 · Qué se mide y cuánto</div>
-      <div class="ggrid">${tiposF}${gf('Tipo de meta', `<select data-i="${i}" data-f="modo" aria-label="Tipo de meta">${modosDe(r.tipos).map((m) => opt(m, MODO_LABEL[m], r.modo)).join('')}</select>`)}
-        ${gf('Valor', `<span><input type="text" inputmode="decimal" data-i="${i}" data-f="valor" aria-label="Valor" style="width:90px" value="${pctMode ? pct(r.valor) : esc(String(r.valor).replace('.', ','))}">${pctMode ? ' %' : ''}</span>`)}
-        ${r.modo === 'share' ? gf('Cómo se mide el share', `<select data-i="${i}" data-f="base" aria-label="Cómo se mide">${opt('pdv', 'Cada PDV debe llegar (los tipos suman juntos)', r.base || 'pdv')}${opt('grupo', 'Todo el grupo junto', r.base)}</select>`) : ''}
+      <div class="ggrid">${tiposF}${gf('Tipo de meta', `<select data-i="${i}" data-f="kind_modo" aria-label="Tipo de meta">${modosDe(r.tipos).map((m) => opt(m, KIND[m], kindDe(r.modo))).join('')}</select>`)}
+        ${gf('Valor', `<span><input type="text" inputmode="decimal" data-i="${i}" data-f="valor" aria-label="Valor" style="width:90px" value="${pctMode ? pct(r.valor) : esc(String(r.valor).replace('.', ','))}">${pctMode ? ' %' : ' caras'}</span>`)}
+        ${r.modo === 'penetracion' ? gf('Se mide', '<span class="note">Sobre el grupo: % de tiendas con CN</span>') : gf('Se mide', `<select data-i="${i}" data-f="nivel" aria-label="Se mide por tienda o general">${opt('pdv', 'Por tienda (cada PDV debe cumplir)', nivel(r))}${opt('grupo', 'General (todo el grupo junto)', nivel(r))}</select>`)}
         ${gf('Periodo', periodCell(r, i))}${gf('Responsable', `<input type="text" data-i="${i}" data-f="responsable" value="${esc(r.responsable)}" aria-label="Responsable">`)}</div>
       <div class="gsec">2 · A qué PDV aplica (vacío = todos)</div>
       <div class="ggrid">${DIMS.map(([k, l]) => msel(l, i, k, ST.opts[k] || [], r.sel[k])).join('')}${pdvBox('Solo estos PDV', i, 'pdv', r.sel.pdv)}${pdvBox('Excluir estos PDV de la meta', i, 'exc', r.excluir)}</div>
@@ -79,17 +82,17 @@
   const csv = (name, head, rows) => { const q = (x) => { const s = String(x ?? ''); return /[;"\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }; const t = '﻿' + [head, ...rows].map((r) => r.map(q).join(';')).join('\r\n'); const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([t], { type: 'text/csv;charset=utf-8' })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1500); };
   const HEAD = ['NOMBRE', 'TIPOS', 'TIPO DE META', 'VALOR', 'MEDIR', 'REGIONES', 'CADENAS', 'SUPERVISORES', 'ECM', 'PDV', 'EXCLUIR PDV', 'PERIODO', 'RESPONSABLE'];
   const plantilla = () => { csv('plantilla_metas.csv', HEAD, [
-    ['Percha Costa', 'Percha', 'Share %', 80, 'Cada PDV', 'COSTA', '', '', '', '', '', '', 'Gerencia'], ['Frío + seco', 'Bandeja frío + Bandeja seco', 'Share %', 65, 'Cada PDV', '', 'TIA|SUPERMAXI', '', '', '', '', '2026-11', 'Gerencia'],
-    ['Espacios del grupo', 'Ruma + Bandeja frío + Bandeja seco', 'Share %', 70, 'Todo el grupo', 'SIERRA', '', '', '', '', '11935916', '2026-W46', ''], ['Ruma del asesor', 'Ruma', 'Caras por PDV', 2, '', '', '', '', 'ECM029', '', '', '2026-11', ''],
-    ['Penetración seco', 'Bandeja seco', 'Penetración', 40, '', '', '', 'ERWIN LASCANO', '', '', '', '', ''], ['Solo estos PDV', 'Percha', 'Caras por PDV', 10, '', '', '', '', '', '11935916|11816380', '', '2026-W46', '']]);
-    toast('Plantilla descargada. Deja vacío lo que aplique a todos. MEDIR (solo en share): «Cada PDV» o «Todo el grupo». PERIODO: vacío (siempre), 2026-11 (mes), 2026-11+ (desde ese mes) o 2026-W46 (semana).'); };
-  const actuales = () => csv('metas_actuales.csv', HEAD, ST.rows.map((r) => [r.nombre, r.tipos.map((t) => TLAB[t]).join(' + '), MODO_LABEL[r.modo].split(' (')[0].replace(' %', ' %'), r.modo === 'share' || r.modo === 'penetracion' ? +(r.valor * 100).toFixed(2) : r.valor, r.modo === 'share' ? (r.base === 'grupo' ? 'Todo el grupo' : 'Cada PDV') : '', r.sel.region.join('|'), r.sel.cadena.join('|'), r.sel.supervisor.join('|'), r.sel.ecm.join('|'), r.sel.pdv.join('|'), r.excluir.join('|'), r.mes, r.responsable]));
+    ['Percha Costa', 'Percha', 'Share %', 80, 'Por tienda', 'COSTA', '', '', '', '', '', '', 'Gerencia'], ['Frío + seco', 'Bandeja frío + Bandeja seco', 'Share %', 65, 'Por tienda', '', 'TIA|SUPERMAXI', '', '', '', '', '2026-11', 'Gerencia'],
+    ['Espacios del grupo', 'Ruma + Bandeja frío + Bandeja seco', 'Share %', 70, 'General (grupo)', 'SIERRA', '', '', '', '', '11935916', '2026-W46', ''], ['Ruma del asesor', 'Ruma', 'Caras por tienda', 2, '', '', '', '', 'ECM029', '', '', '2026-11', ''],
+    ['Penetración seco', 'Bandeja seco', 'Penetración', 40, '', '', '', 'ERWIN LASCANO', '', '', '', '', ''], ['Solo estos PDV', 'Percha', 'Caras por tienda', 10, '', '', '', '', '', '11935916|11816380', '', '2026-W46', '']]);
+    toast('Plantilla descargada. Deja vacío lo que aplique a todos. MEDIR: «Por tienda» (cada PDV debe cumplir) o «General (grupo)» (todo el grupo junto); aplica a share, caras y caras ganadas. PERIODO: vacío (siempre), 2026-11 (mes), 2026-11+ (desde ese mes) o 2026-W46 (semana).'); };
+  const actuales = () => csv('metas_actuales.csv', HEAD, ST.rows.map((r) => [r.nombre, r.tipos.map((t) => TLAB[t]).join(' + '), MODO_LABEL[r.modo].split(' (')[0].replace(' %', ' %'), r.modo === 'share' || r.modo === 'penetracion' ? +(r.valor * 100).toFixed(2) : r.valor, r.modo === 'penetracion' ? '' : nivel(r) === 'pdv' ? 'Por tienda' : 'General (grupo)', r.sel.region.join('|'), r.sel.cadena.join('|'), r.sel.supervisor.join('|'), r.sel.ecm.join('|'), r.sel.pdv.join('|'), r.excluir.join('|'), r.mes, r.responsable]));
 
   async function guardar() {
     const b = $('#mg_save'), msg = $('#mg_msg'); if (b) b.disabled = true; msg.textContent = 'Guardando…';
     try {
       const vistos = new Set(), filas = ST.rows.map((r) => { let n = r.nombre.trim() || goalTitle(r).replace(/^./, (c) => c.toUpperCase()), k = n + '|' + r.mes + '|' + r.modo, j = 1; while (vistos.has(k)) { j++; k = n + ' (' + j + ')|' + r.mes + '|' + r.modo; } vistos.add(k); if (j > 1) n += ' (' + j + ')';
-        return { id: r.id, row: { nombre: n, mes: r.mes, ambito: 'grupo', clave: '', tipo: '', modo: r.modo, valor: r.valor, responsable: r.responsable, tipos: r.tipos.join('|'), regiones: r.sel.region.join('|'), cadenas: r.sel.cadena.join('|'), supervisores: r.sel.supervisor.join('|'), ecms: r.sel.ecm.join('|'), pdvs: r.sel.pdv.join('|'), excluir: r.excluir.join('|'), base: r.modo === 'share' ? r.base || 'pdv' : '' } }; });
+        return { id: r.id, row: { nombre: n, mes: r.mes, ambito: 'grupo', clave: '', tipo: '', modo: r.modo, valor: r.valor, responsable: r.responsable, tipos: r.tipos.join('|'), regiones: r.sel.region.join('|'), cadenas: r.sel.cadena.join('|'), supervisores: r.sel.supervisor.join('|'), ecms: r.sel.ecm.join('|'), pdvs: r.sel.pdv.join('|'), excluir: r.excluir.join('|'), base: r.modo === 'share' ? r.base || 'pdv' : r.modo === 'ganadas' ? r.base || 'grupo' : '' } }; });
       const ids = new Set(filas.map((x) => x.id).filter(Boolean)), borrar = ST.orig.filter((id) => !ids.has(id));
       for (let i = 0; i < borrar.length; i += 200) { const { error } = await sb.from('metas').delete().in('id', borrar.slice(i, i + 200)); if (error) throw error; }
       for (const f of filas.filter((x) => x.id)) { const { error } = await sb.from('metas').update(f.row).eq('id', f.id); if (error) throw error; }
@@ -138,9 +141,11 @@
     else if (r && t.dataset.ms) { r.sel[t.dataset.ms] = [...t.selectedOptions].map((o) => o.value); mark(); }
     else if (r && t.dataset.pdv) { const a = parsePdvs(t.value); if (t.dataset.pdv === 'pdv') r.sel.pdv = a; else r.excluir = a; mark(); }
     else if (r && t.dataset.f) { const f = t.dataset.f;
-      if (f === 'nombre') r.nombre = t.value; else if (f === 'responsable') r.responsable = t.value; else if (f === 'base') r.base = t.value; else if (f === 'modo') r.modo = t.value;
+      if (f === 'nombre') r.nombre = t.value; else if (f === 'responsable') r.responsable = t.value; else if (f === 'base') r.base = t.value;
+      else if (f === 'kind_modo') { const k = t.value, antes = r.modo === 'share' || r.modo === 'penetracion', despues = k === 'share' || k === 'penetracion'; if (antes !== despues) r.valor = despues ? Number(S.cfg.meta_sos || 0.8) : 1; r.modo = k === 'caras' ? (nivel(r) === 'pdv' ? 'caras_pdv' : 'caras_total') : k; if (k === 'ganadas' && !r.base) r.base = 'grupo'; if (k === 'share' && !r.base) r.base = 'pdv'; }
+      else if (f === 'nivel') { if (r.modo === 'caras_pdv' || r.modo === 'caras_total') r.modo = t.value === 'pdv' ? 'caras_pdv' : 'caras_total'; else r.base = t.value; }
       else if (f === 'valor') { const v = parseFloat(String(t.value).replace(',', '.')), pm = r.modo === 'share' || r.modo === 'penetracion'; r.valor = isFinite(v) ? (pm ? v / 100 : v) : 0; }
-      else if (f === 'tipos') { const prev = r.tipos.slice(); let a = [...t.selectedOptions].map((o) => o.value); if (!a.length) a = prev; if (a.length > 1 && a.includes('PERCHA')) a = prev.includes('PERCHA') ? a.filter((x) => x !== 'PERCHA') : ['PERCHA']; r.tipos = a; const ok = modosDe(a); if (!ok.includes(r.modo)) r.modo = ok[0]; }
+      else if (f === 'tipos') { const prev = r.tipos.slice(); let a = [...t.selectedOptions].map((o) => o.value); if (!a.length) a = prev; if (a.length > 1 && a.includes('PERCHA')) a = prev.includes('PERCHA') ? a.filter((x) => x !== 'PERCHA') : ['PERCHA']; r.tipos = a; const ok = modosDe(a); if (!ok.includes(kindDe(r.modo))) r.modo = ok[0]; }
       else if (f === 'kind') { r.mes = t.value === 'all' ? '' : t.value === 'month' ? curMonth() : t.value === 'from' ? curMonth() + '+' : U().clavSem(new Date().toISOString().slice(0, 10)); }
       else if (f === 'mes_from') { if (t.value) r.mes = t.value + '+'; } else if (f === 'mes_month') { if (t.value) r.mes = t.value; } else if (f === 'mes_week') r.mes = t.value;
       mark(); }

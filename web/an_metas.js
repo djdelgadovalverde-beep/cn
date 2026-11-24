@@ -27,10 +27,10 @@
       if (r instanceof Object && per && /^\d{4}-\d{2}-\d{2}/.test(per)) per = per.slice(0, 7);
       let valor = parseFloat(String(first(r, ['VALOR', 'META', 'OBJETIVO'])).replace('%', '').replace(',', '.')); if (!isFinite(valor)) { desc++; return; }
       const tipos = TXT(first(r, ['TIPOS', 'TIPO', 'INDICADOR', 'TIPO DE ESPACIO'])).toUpperCase(), nombre = TXT(first(r, ['NOMBRE', 'DETALLE'])) || `${tipos} ${per}`;
-      let modo = norm(first(r, ['MODO', 'TIPO DE META', 'METODO'])).toLowerCase().replace(/[^a-z_]/g, '_'); if (/penetra/.test(modo) || /PENETRACI/.test(norm(nombre))) modo = 'penetracion'; else if (/caras/.test(modo) && /pdv/.test(modo)) modo = 'caras_pdv'; else if (/caras/.test(modo)) modo = 'caras_total'; else if (/ganad/.test(modo)) modo = 'ganadas'; else modo = 'share';
+      let modo = norm(first(r, ['MODO', 'TIPO DE META', 'METODO'])).toLowerCase().replace(/[^a-z_]/g, '_'); if (/penetra/.test(modo) || /PENETRACI/.test(norm(nombre))) modo = 'penetracion'; else if (/caras/.test(modo) && /(pdv|tienda)/.test(modo)) modo = 'caras_pdv'; else if (/caras/.test(modo)) modo = 'caras_total'; else if (/ganad/.test(modo)) modo = 'ganadas'; else modo = 'share';
       if ((modo === 'share' || modo === 'penetracion') && valor > 1) valor /= 100;
       const o = { nombre, mes: per, ambito: (norm(first(r, ['AMBITO'])) || 'GRUPO').toLowerCase(), clave: TXT(first(r, ['CLAVE'])), tipo: '', modo, valor, responsable: TXT(first(r, ['RESPONSABLE'])), tipos,
-        regiones: TXT(first(r, ['REGIONES', 'REGION'])), cadenas: TXT(first(r, ['CADENAS', 'CADENA'])), supervisores: TXT(first(r, ['SUPERVISORES', 'SUPERVISOR'])), ecms: TXT(first(r, ['ECMS', 'ECM'])), pdvs: TXT(first(r, ['PDVS', 'PDV'])), excluir: TXT(first(r, ['EXCLUIR', 'EXCLUIR PDV'])), base: /grupo/i.test(TXT(first(r, ['BASE', 'MEDIR']))) ? 'grupo' : 'pdv' };
+        regiones: TXT(first(r, ['REGIONES', 'REGION'])), cadenas: TXT(first(r, ['CADENAS', 'CADENA'])), supervisores: TXT(first(r, ['SUPERVISORES', 'SUPERVISOR'])), ecms: TXT(first(r, ['ECMS', 'ECM'])), pdvs: TXT(first(r, ['PDVS', 'PDV'])), excluir: TXT(first(r, ['EXCLUIR', 'EXCLUIR PDV'])), base: /grupo|general/i.test(TXT(first(r, ['BASE', 'MEDIR']))) ? 'grupo' : /pdv|tienda|cada/i.test(TXT(first(r, ['BASE', 'MEDIR']))) ? 'pdv' : '' };
       out[[o.nombre, o.mes, o.ambito, o.clave, o.tipo, o.modo].join('|')] = o;
     });
     const L = Object.values(out); if (!L.length) throw new Error('Ninguna meta válida. Columnas: NOMBRE, TIPOS, TIPO DE META, VALOR, REGIONES, CADENAS, SUPERVISORES, ECM, PDV, EXCLUIR, PERIODO, RESPONSABLE.');
@@ -43,19 +43,27 @@
   /* una meta aplica a un periodo si es de ese periodo, de su mes, «siempre» o «desde un mes en adelante» */
   const aplica = (m, per) => !m.mes || m.mes === per || (/-W/.test(per) && m.mes === mesDe(per)) || (/^\d{4}-\d{2}\+$/.test(m.mes) && m.mes.slice(0, 7) <= mesDe(per));
   CN.metaAplica = aplica;
+  let RUTC = null, RUTT = 0;
+  async function universo(m) { /* PDV activos del rutero que entran en la meta (según su alcance), sin los excluidos */
+    if (!RUTC || Date.now() - RUTT > 60000) { RUTC = await CN.fetchPar((o) => sb.from('rutero').select('codigo,region,cadena,supervisor,ecm,activo', o).order('codigo')); RUTT = Date.now(); }
+    const L = (v, f) => lista(v).map(f), U = (x) => String(x || '').trim().toUpperCase(), rg = L(m.regiones, U), cd = L(m.cadenas, U), sp = L(m.supervisores, U), ec = L(m.ecms, U), pd = lista(m.pdvs), ex = new Set(lista(m.excluir));
+    return RUTC.filter((r) => r.activo !== false && !CN.ecmOff(r.ecm) && !ex.has(r.codigo) && (!rg.length || rg.includes(U(r.region))) && (!cd.length || cd.includes(U(r.cadena))) && (!sp.length || sp.includes(U(r.supervisor))) && (!ec.length || ec.includes(U(r.ecm))) && (!pd.length || pd.includes(r.codigo))).length;
+  }
   async function avance(m, per) {
     const pp = per || (m.mes && !/\+$/.test(m.mes) ? m.mes : monthNow()), r = rango(pp), tipos = lista(m.tipos).length ? lista(m.tipos) : [];
     if (m.modo === 'ganadas') {
       const G = CN.sinOff(await CN.fetchPar((o) => sb.from('ganancias').select('fecha,codigo,ecm,supervisor,cadena,percha,frio,seco,ruma', o).gte('fecha', r.d).lte('fecha', r.h).order('id')));
       const e = lista(m.ecms).map((x) => ecmNorm(x)), s = lista(m.supervisores).map(norm), c = lista(m.cadenas).map(norm), p = lista(m.pdvs), t = tipos.map((x) => ({ PERCHA: 'percha', 'BANDEJA FRÍO': 'frio', 'BANDEJA SECO': 'seco', RUMA: 'ruma' })[x]).filter(Boolean);
       const sel = G.filter((g) => (!e.length || e.includes(ecmNorm(g.ecm || ''))) && (!s.length || s.includes(norm(g.supervisor || ''))) && (!c.length || c.includes(norm(g.cadena || ''))) && (!p.length || p.includes(g.codigo)));
-      return { actual: sel.reduce((a, g) => a + (t.length ? t : ['percha', 'frio', 'seco', 'ruma']).reduce((b, k) => b + (g[k] || 0), 0), 0), meta: m.valor, pct: true === false ? null : null, rango: r };
+      const ks = t.length ? t : ['percha', 'frio', 'seco', 'ruma'], suma = (g) => ks.reduce((b, k) => b + (g[k] || 0), 0);
+      if (m.base === 'pdv') { const P = {}; sel.forEach((g) => (P[g.codigo] = (P[g.codigo] || 0) + suma(g))); return { actual: Object.values(P).reduce((a, v) => a + Math.min(v, m.valor), 0), meta: m.valor * (await universo(m)), rango: r }; }
+      return { actual: sel.reduce((a, g) => a + suma(g), 0), meta: m.valor, pct: true === false ? null : null, rango: r };
     }
     const args = { p_desde: r.d, p_hasta: r.h, p_region: lista(m.regiones).length ? lista(m.regiones) : null, p_cadena: lista(m.cadenas).length ? lista(m.cadenas) : null, p_supervisor: lista(m.supervisores).length ? lista(m.supervisores).map((x) => x.toUpperCase()) : null,
       p_ecm: lista(m.ecms).length ? lista(m.ecms).map((x) => x.toUpperCase()) : null, p_pdv: lista(m.pdvs).length ? lista(m.pdvs) : null, p_excluir: lista(m.excluir).length ? lista(m.excluir) : null };
     const rows = await CN.shareAgg({ ...args, p_dim: m.modo === 'penetracion' ? 'pdv' : 'TOTAL' }), sel = rows.filter((x) => !tipos.length || tipos.includes(x.tipo));
     if (m.modo === 'penetracion') { const P = {}; sel.forEach((x) => { const o = (P[x.dim] ||= 0); if (x.grupo === 'CN' && Number(x.caras) > 0) P[x.dim] = 1; }); const n = new Set(sel.map((x) => x.dim)).size, ok = Object.values(P).reduce((a, b) => a + b, 0); return { actual: n ? ok / n : null, n, ok, meta: m.valor, rango: r }; }
-    if (m.modo === 'caras_pdv') { const P = {}; sel.forEach((x) => { const o = (P[x.dim] ||= 0); if (x.grupo === 'CN') P[x.dim] += Number(x.caras); }); const pdvs = new Set(sel.map((x) => x.dim)).size, ok = Object.values(P).reduce((a, b) => a + Math.min(b, m.valor), 0); return { actual: ok, meta: m.valor * pdvs, rango: r }; }
+    if (m.modo === 'caras_pdv') { const P = {}; sel.forEach((x) => { const o = (P[x.dim] ||= 0); if (x.grupo === 'CN') P[x.dim] += Number(x.caras); }); const pdvs = await universo(m), ok = Object.values(P).reduce((a, b) => a + Math.min(b, m.valor), 0); return { actual: ok, meta: m.valor * pdvs, rango: r }; }
     const tot = sel.reduce((a, x) => a + Number(x.caras), 0), cn = sel.filter((x) => x.grupo === 'CN').reduce((a, x) => a + Number(x.caras), 0);
     return m.modo === 'caras_total' ? { actual: cn, meta: m.valor, rango: r } : { actual: tot ? cn / tot : null, tot, cn, meta: m.valor, rango: r };
   }
