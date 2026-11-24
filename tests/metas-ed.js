@@ -1,0 +1,23 @@
+/* Editor de metas: pestaña, crear una meta con todas las opciones, guardar, duplicar, filtrar y copiar de mes. */
+const { chromium } = require('playwright'); const fs = require('fs'), path = require('path'), http = require('http');
+const WEB = path.join(__dirname, '..', 'web');
+const srv = http.createServer((req, res) => { const f = path.join(WEB, req.url.split('?')[0] === '/' ? 'index.html' : req.url.split('?')[0]); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : f.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(fs.readFileSync(f)); });
+(async () => { await new Promise((r) => srv.listen(8796, r)); const b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 1500, height: 1300 } })).newPage(), errs = [];
+  p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); }); p.on('dialog', (d) => d.accept());
+  await p.route('https://cdn.jsdelivr.net/**', (r) => { const u = r.request().url(); const S = (f) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(f) }); if (/supabase/.test(u)) return S(path.join(__dirname, 'fake.js')); if (/xlsx/.test(u)) return S(path.join(__dirname, '..', 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js')); r.abort(); });
+  await p.goto('http://localhost:8796/#metas'); await p.waitForSelector('#nav [data-sub^="metas|"]'); console.log('Pestañas:', await p.$$eval('#nav [data-sub^="metas|"]', (a) => a.map((x) => x.innerText)));
+  const antes = await p.evaluate(() => window.__DB.metas.length); await p.click('[data-sub="metas|edit"]'); await p.waitForSelector('#mg'); console.log('Metas en el editor:', await p.$$eval('.ge', (a) => a.length), '(en base:', antes + ')');
+  await p.click('[data-a="add"]'); await p.waitForSelector('.ge:first-child [data-f="nombre"]');
+  await p.fill('.ge:first-child [data-f="nombre"]', 'Frío y seco Costa'); await p.selectOption('.ge:first-child [data-f="tipos"]', ['BANDEJA FRÍO', 'BANDEJA SECO']);
+  console.log('Modos con frío+seco:', await p.$$eval('.ge:first-child [data-f="modo"] option', (a) => a.map((x) => x.value)));
+  await p.selectOption('.ge:first-child [data-f="modo"]', 'penetracion'); await p.fill('.ge:first-child [data-f="valor"]', '40'); await p.press('.ge:first-child [data-f="valor"]', 'Tab');
+  await p.selectOption('.ge:first-child [data-f="kind"]', 'from'); await p.fill('.ge:first-child [data-f="mes_from"]', '2026-12'); await p.fill('.ge:first-child [data-f="responsable"]', 'Gerencia'); await p.press('.ge:first-child [data-f="responsable"]', 'Tab');
+  const reg = await p.$$eval('.ge:first-child [data-ms="region"] option', (a) => a.map((x) => x.value)); if (reg.length) await p.selectOption('.ge:first-child [data-ms="region"]', [reg[0]]);
+  await p.fill('.ge:first-child [data-pdv="exc"]', '1001, 1002'); await p.press('.ge:first-child [data-pdv="exc"]', 'Tab');
+  console.log('Resumen:', await p.$eval('.ge:first-child .gsum', (e) => e.innerText)); await p.screenshot({ path: path.join(__dirname, 'metas-ed.png') });
+  await p.click('#mg_save'); await p.waitForFunction(() => document.querySelector('#mg_msg').innerText.includes('guardadas'), { timeout: 10000 });
+  const g = await p.evaluate(() => window.__DB.metas.find((m) => m.nombre === 'Frío y seco Costa')); console.log('Guardada:', JSON.stringify({ tipos: g.tipos, modo: g.modo, valor: g.valor, mes: g.mes, resp: g.responsable, reg: g.regiones, exc: g.excluir }));
+  await p.click('.ge >> nth=0 >> [data-a="dup"]').catch(async () => { await p.click('[data-a="dup"]'); }); await p.waitForTimeout(300); console.log('Tras duplicar:', await p.$$eval('.ge', (a) => a.length)); await p.click('#mg_save'); await p.waitForTimeout(800); console.log('En base:', await p.evaluate(() => window.__DB.metas.length));
+  await p.selectOption('#f_tipo', 'RUMA'); await p.waitForTimeout(200); console.log('Filtro tipo RUMA:', await p.$$eval('.ge', (a) => a.length));
+  await p.click('[data-sub="metas|alc"]'); await p.waitForTimeout(1500); console.log('Alcance:', (await p.$eval('#main', (e) => e.innerText.replace(/\n/g, ' ').slice(0, 160))));
+  console.log('errores:', errs.length, errs.slice(0, 3)); await b.close(); srv.close(); })();

@@ -292,3 +292,9 @@ a{color:var(--brand)}a button{color:inherit}
 .ay-intro{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;background:var(--sel);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:10px;padding:10px 14px;margin:0 0 14px}.ay-i{flex:1;min-width:240px;font-size:13.5px}.ay-tb{color:var(--mut)}.ay-ib{display:flex;gap:6px;flex-wrap:wrap}.ay-ib button{min-height:32px;padding:4px 10px;font-size:13px}
 .ay-wm{z-index:90}
 tr.ina td{opacity:.62}
+/* editor de metas */
+.ge{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin:10px 0;background:var(--card)}.ge-min{padding:8px 14px}.ge-h{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.ge-h input{flex:1;min-width:200px}.ge-t{flex:1;min-width:240px}
+.gsec{font-weight:700;margin:12px 0 4px;color:var(--brand)}.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}.gf{display:flex;flex-direction:column;gap:4px}.gf.gwide{grid-column:span 2}.gl{font-size:12px;color:var(--mut);font-weight:600}
+.gsum{margin:10px 0 0;padding:8px 10px;background:var(--sel);border-radius:8px;font-size:13px}.chip{display:inline-block;font-size:11px;padding:1px 8px;border-radius:10px;background:var(--sel);color:var(--brand);font-weight:600}
+.goal{border:1px solid var(--line);border-radius:12px;padding:12px 16px;margin:12px 0;display:flex;gap:12px;flex-wrap:wrap;align-items:center}.mfil{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin:10px 0}
+.ge select[multiple]{min-height:84px}

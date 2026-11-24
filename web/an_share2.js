@@ -44,8 +44,8 @@
     /* serie semanal */
     const W = C().bySem(serie), ws = Object.keys(W).sort(), A = ws.map((w) => C().acum(W[w]));
     /* metas de la semana (de la semana o de su mes) */
-    const mesK = a.slice(0, 7), { data: MT } = await sb.from('metas').select('*').in('mes', [pk(k), mesK]);
-    const metas = await Promise.all((MT || []).map(async (m) => { try { return { m, r: await CN.metaAvance(m) }; } catch (e) { return { m, r: null }; } }));
+    const mesK = a.slice(0, 7), { data: MT0 } = await sb.from('metas').select('*').or(`mes.in.("${pk(k)}","${mesK}"),mes.eq.,mes.like.%2B`), MT = (MT0 || []).filter((m) => CN.metaAplica(m, pk(k)));
+    const metas = await Promise.all((MT || []).map(async (m) => { try { return { m, r: await CN.metaAvance(m, !m.mes || /\+$/.test(m.mes) ? pk(k) : undefined) }; } catch (e) { return { m, r: null }; } }));
     /* espacios ganados de la semana */
     const G = CN.sinOff(await CN.fetchPar((o) => { let q = sb.from('ganancias').select('fecha,codigo,ecm,supervisor,cadena,percha,frio,seco,ruma', o).gte('fecha', a).lte('fecha', b); if (s.ecm.length) q = q.in('ecm', s.ecm.map((x) => x.toUpperCase())); if (s.sup.length) q = q.in('supervisor', s.sup.map((x) => x.toUpperCase())); return q.order('id'); }));
     /* total de PDV activos del rutero con los mismos filtros: es la base de la penetración */
