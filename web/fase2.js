@@ -363,16 +363,15 @@
   /* ======================= Catálogo de marcas ======================= */
   VIEWS.catalogo = async function () {
     const m = $('#main');
-    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="manual">Manual</option></select></label><label>Buscar<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
+    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
     const load = async () => {
       let rows = await fetchAll(() => sb.from('catalogo_share').select('*').order('clave'));
       const en = $('#en').value, or = $('#or').value, q = norm($('#q').value);
       rows = rows.filter((r) => (!en || r.encuesta === en) && (!or || r.origen === or) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
-      $('#info').textContent = `${rows.length} preguntas. Al cambiar grupo o tipo, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
-      $('#tb').innerHTML = `<table><thead><tr><th>Pregunta</th><th>Enc.</th><th>Marca</th><th>Grupo</th><th>Tipo</th><th>Origen</th></tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${esc(r.marca || '')}</td>
-        <td>${sel('cg' + i, GRUPOS, r.grupo, `data-k="${esc(r.clave)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}"`)}</td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
-      rows.slice(0, 300).forEach((r, i) => ['cg', 'ct'].forEach((p) => { $('#' + p + i).onchange = async () => {
-        const { error } = await sb.from('catalogo_share').update({ grupo: $('#cg' + i).value, tipo: $('#ct' + i).value, origen: 'manual' }).eq('clave', r.clave).eq('encuesta', r.encuesta); error ? fail(error) : toast('Guardado'); }; }));
+      $('#info').textContent = `${rows.length} preguntas. Al cambiar la marca, el tipo o el SKU, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
+      $('#tb').innerHTML = `<table><thead><tr><th>Pregunta</th><th>Enc.</th><th>Marca</th><th>Tipo</th><th>SKU / producto</th><th>Origen</th></tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${sel('cg' + i, GRUPOS, r.grupo, `data-k="${esc(r.clave)}" aria-label="Marca de ${esc(r.pregunta)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}" aria-label="Tipo de ${esc(r.pregunta)}"`)}</td><td><input id="cs${i}" value="${esc(r.marca || '')}" maxlength="80" style="min-width:180px" aria-label="SKU o producto de ${esc(r.pregunta)}"></td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
+      rows.slice(0, 300).forEach((r, i) => ['cg', 'ct', 'cs'].forEach((p) => { $('#' + p + i).onchange = async () => {
+        const { error } = await sb.from('catalogo_share').update({ grupo: $('#cg' + i).value, tipo: $('#ct' + i).value, marca: $('#cs' + i).value.trim().slice(0, 80), origen: 'manual' }).eq('clave', r.clave).eq('encuesta', r.encuesta); error ? fail(error) : toast('Guardado'); }; }));
     };
     ['en', 'or'].forEach((id) => $('#' + id).onchange = () => load().catch(fail)); let dt; $('#q').oninput = () => { clearTimeout(dt); dt = setTimeout(() => load().catch(fail), 350); };
     await load();
