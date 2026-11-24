@@ -316,7 +316,7 @@
     const c = {}; (data.cargas || []).forEach((x) => (c[x.tipo] = x.fecha));
     const f = (x) => (x ? new Date(x).toLocaleString('es-EC', { dateStyle: 'short', timeStyle: 'short' }) : '—');
     const rg = (o) => (o && o.desde ? `${o.desde} → ${o.hasta}` : '—');
-    const rows = [['Visitas', data.vis.filas, rg(data.vis), c.vis], ['Tareas', data.tar.filas, rg(data.tar), c.tar], ['SOS / SOE (caras)', data.share.filas, `${rg(data.share)} · ${fN(data.share.pdv)} PDV`, c.enc],
+    const rows = [['Visitas', data.vis.filas, rg(data.vis), c.vis], ['Tareas', data.tar.filas, rg(data.tar), c.tar], ...(data.sos && data.soe ? [['SOS · percha', data.sos.filas, `${rg(data.sos)} · ${fN(data.sos.pdv)} PDV`, c.sos || c.enc], ['SOE · espacios', data.soe.filas, `${rg(data.soe)} · ${fN(data.soe.pdv)} PDV`, c.soe || c.enc]] : [['SOS / SOE (caras)', data.share.filas, `${rg(data.share)} · ${fN(data.share.pdv)} PDV`, c.enc]]),
       ['Espacios ganados', data.gan.filas, rg(data.gan), c.gan], ['Rutero (PDV)', data.rutero, '', c.rut], ['ECM', data.ecm, '', c.ecm], ['Enlaces de fotos', data.enlaces, '', c.enl], ['Metas', data.metas, '', c.meta], ['Justificaciones', data.justif, '', '']];
     return `<div class="card"><h2>Estado de los datos</h2><div class="tw"><table><thead><tr><th>Base</th><th class="n">Registros</th><th>Fechas</th><th>Última carga</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${r[0]}</td><td class="n">${fN(r[1])}</td><td>${esc(r[2])}</td><td>${f(r[3])}</td></tr>`).join('')}</tbody></table></div></div>`;
   }

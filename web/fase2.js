@@ -117,8 +117,11 @@
       out.textContent = `Subiendo ${Math.min(data.length, data.indexOf(part[0]) + 500)} de ${data.length}…`;
       const { error } = await sb.from('share_detalle').upsert(part, { onConflict: 'fecha,codigo,tipo,grupo,marca,sku' }); if (error) throw error;
     }
+    /* el archivo puede traer SOS y SOE juntos: cada uno queda en su propio registro de cargas */
+    try { const por = (fn) => data.filter(fn).length, ls = []; const nS = por((r) => r.tipo === 'PERCHA'), nE = por((r) => r.tipo !== 'PERCHA');
+      if (nS) ls.push({ tipo: 'sos', archivo: file.name.slice(0, 200), filas: nS }); if (nE) ls.push({ tipo: 'soe', archivo: file.name.slice(0, 200), filas: nE }); if (ls.length) await sb.from('cargas').insert(ls); } catch (e) { /* el registro de cargas no es crítico */ }
     const sinL = Object.values(sin);
-    out.innerHTML = `Listo: <b>${data.length}</b> registros de caras cargados (${keep.length} respuestas).<br>
+    out.innerHTML = `Listo: <b>${data.length}</b> registros de caras cargados (${keep.length} respuestas): <b>SOS · percha ${data.filter((r) => r.tipo === 'PERCHA').length}</b> · <b>SOE · espacios ${data.filter((r) => r.tipo !== 'PERCHA').length}</b>.<br>
       <span class="note">PDV con visita más reciente ya guardada (se conserva): ${conservados} · Fuera de mié–dom: ${st.fueraDia} · visitas anteriores descartadas: ${st.anteriores} · filas en 0: ${st.sinValor} · PDV excluidos: ${st.excluidos} · sin fecha/código: ${st.sinFecha} · sin tipo de encuesta: ${st.sinTipo}.
       ${nuevas.length ? `<br>${nuevas.length} preguntas se clasificaron solas por palabras clave: revísalas en «Catálogo de marcas».` : ''}</span>
       ${sinL.length ? `<div class="card" style="margin-top:8px"><b>${sinL.length} preguntas sin clasificar</b>: ya están en el <b>Catálogo de marcas</b> con la marca «SIN CLASIFICAR» y no se contaron. Clasifícalas aquí o allá y vuelve a cargar el archivo:
