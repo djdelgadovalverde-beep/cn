@@ -70,7 +70,7 @@
   function generalBox(admin, tipo) {
     const soe = tipo === 'SOE', nm = soe ? 'espacios' : 'percha', k = soe ? 'meta_soe' : 'meta_sos', v = Number(S.cfg[k] || 0.8);
     return `<div class="goal"><div style="flex:1 1 280px"><strong>Meta CN · share de ${nm} · ${fp(v)}</strong> <span class="chip">Global</span><div class="note">${soe ? 'Share de espacios de CN (ruma + frío + seco) que se exige a todos los PDV.' : 'Share de percha de CN que se exige a todos los PDV.'} Las metas de abajo (generales o específicas) tienen prioridad sobre ella.</div></div>
-      <label>Meta (%)<input type="text" inputmode="decimal" data-mg="${k}" value="${pct(v)}" style="width:110px;text-align:right" ${admin ? '' : 'disabled'} aria-label="Meta general de share de ${nm} (%)"></label>${admin ? `<button type="button" class="pri" data-a="mg" data-k="${k}">Guardar meta de ${nm}</button>` : ''}</div>`;
+      <label>Meta de ${nm} (%)<input type="text" inputmode="decimal" data-mg="${k}" value="${pct(v)}" style="width:110px;text-align:right" ${admin ? '' : 'disabled'} aria-label="Meta general de share de ${nm} (%)"></label>${admin ? `<button type="button" class="pri" data-a="mg" data-k="${k}">Guardar meta de ${nm}</button>` : ''}</div>`;
   }
   function copiarBox() {
     const meses = {}; ST.rows.forEach((r) => { if (r.mes && !/-W/.test(r.mes)) meses[r.mes.slice(0, 7)] = 1; }); const ks = Object.keys(meses).sort().reverse(); if (!ks.length) return '';
