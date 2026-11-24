@@ -9,3 +9,4 @@ tests/out/*
 Thumbs.db
 supabase/.temp/
 supabase/.branches/
+docs/

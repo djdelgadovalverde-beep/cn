@@ -1,7 +1,7 @@
 # Base de datos (Supabase)
 
 La **fuente de verdad** del esquema es el proyecto de Supabase `iizebvjhmpglgsunmtog` (región sa-east-1). Los archivos
-`schema*.sql` de esta carpeta son la base inicial; después se aplicaron más de 20 migraciones desde el asistente
+`schema*.sql` de esta carpeta son la base inicial; después se aplicaron más de 20 migraciones desde el panel de Supabase
 (permisos por región, tipos de usuario, rendimiento de RLS, análisis de SOS/SOE, plan diario…).
 
 ## Traer el esquema real a tu repositorio (una vez)
