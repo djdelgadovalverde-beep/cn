@@ -16,7 +16,7 @@
     return out;
   }
   const sel = (id, opts, cur, extra = '') => `<select id="${id}" ${extra}>${opts.map((o) => `<option ${o === cur ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
-  const GRUPOS = ['CN', 'HNK', 'MERC', 'OTROS', 'EXCLUIR'], TIPOS = ['PERCHA', 'RUMA', 'BANDEJA FRÍO', 'BANDEJA SECO'];
+  const GRUPOS = ['CN', 'HNK', 'MERC', 'OTROS', 'EXCLUIR'], GRUPOS_CAT = [...['CN', 'HNK', 'MERC', 'OTROS', 'EXCLUIR'], 'SIN CLASIFICAR'], TIPOS = ['PERCHA', 'RUMA', 'BANDEJA FRÍO', 'BANDEJA SECO'];
   const chunks = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
 
   /* ======================= Encuestas SOS / SOE ======================= */
@@ -71,9 +71,12 @@
     const cmap = Object.fromEntries(cat.map((c) => [c.clave + '|' + c.encuesta, c]));
     const nuevas = [], sin = {};
     const info = (sv, q) => {
-      const k = norm(q), mk = k + '|' + sv; if (cmap[mk]) return cmap[mk];
+      const k = norm(q), mk = k + '|' + sv;
+      if (cmap[mk]) { if (cmap[mk].grupo === 'SIN CLASIFICAR') { (sin[mk] ||= { pregunta: q, sv, filas: 0, enCatalogo: true }).filas++; return null; } return cmap[mk]; }
       const c = clasificar(q, sv);
-      if (!c) { (sin[mk] ||= { pregunta: q, sv, filas: 0 }).filas++; return null; }
+      if (!c) { /* toda pregunta nueva entra al catálogo: queda «SIN CLASIFICAR» (no se cuenta) hasta que se elija su marca */
+        const rec = { clave: k, pregunta: q.slice(0, 300), encuesta: sv, grupo: 'SIN CLASIFICAR', tipo: sv === 'SOS' ? 'PERCHA' : 'RUMA', marca: q.slice(0, 80), visual: q.slice(0, 120), origen: 'auto' };
+        cmap[mk] = rec; nuevas.push(rec); (sin[mk] ||= { pregunta: q, sv, filas: 0 }).filas++; return null; }
       const rec = { clave: k, pregunta: q.slice(0, 300), encuesta: sv, grupo: c.grupo, tipo: c.tipo, marca: c.marca, visual: (c.visual || '').slice(0, 120), origen: 'auto' };
       cmap[mk] = rec; nuevas.push(rec); return rec;
     };
@@ -118,7 +121,7 @@
     out.innerHTML = `Listo: <b>${data.length}</b> registros de caras cargados (${keep.length} respuestas).<br>
       <span class="note">PDV con visita más reciente ya guardada (se conserva): ${conservados} · Fuera de mié–dom: ${st.fueraDia} · visitas anteriores descartadas: ${st.anteriores} · filas en 0: ${st.sinValor} · PDV excluidos: ${st.excluidos} · sin fecha/código: ${st.sinFecha} · sin tipo de encuesta: ${st.sinTipo}.
       ${nuevas.length ? `<br>${nuevas.length} preguntas se clasificaron solas por palabras clave: revísalas en «Catálogo de marcas».` : ''}</span>
-      ${sinL.length ? `<div class="card" style="margin-top:8px"><b>${sinL.length} preguntas sin clasificar</b> (no se contaron). Clasifícalas y vuelve a cargar el archivo:
+      ${sinL.length ? `<div class="card" style="margin-top:8px"><b>${sinL.length} preguntas sin clasificar</b>: ya están en el <b>Catálogo de marcas</b> con la marca «SIN CLASIFICAR» y no se contaron. Clasifícalas aquí o allá y vuelve a cargar el archivo:
       <div class="tw"><table><tbody>${sinL.map((u, n) => `<tr><td>${esc(u.pregunta)}<div class="note">${u.sv} · ${u.filas} filas</div></td><td>${sel('sg' + n, GRUPOS, 'OTROS')}</td><td>${sel('st' + n, u.sv === 'SOS' ? ['PERCHA'] : TIPOS.slice(1), '')}</td><td><button data-sn="${n}">Guardar</button></td></tr>`).join('')}</tbody></table></div></div>` : ''}`;
     out.querySelectorAll('[data-sn]').forEach((b) => b.onclick = async () => {
       const u = sinL[b.dataset.sn], n = b.dataset.sn;
@@ -363,13 +366,14 @@
   /* ======================= Catálogo de marcas ======================= */
   VIEWS.catalogo = async function () {
     const m = $('#main');
-    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
+    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="sin">Sin clasificar</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
     const load = async () => {
       let rows = await fetchAll(() => sb.from('catalogo_share').select('*').order('clave'));
       const en = $('#en').value, or = $('#or').value, q = norm($('#q').value);
-      rows = rows.filter((r) => (!en || r.encuesta === en) && (!or || r.origen === or) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
-      $('#info').textContent = `${rows.length} preguntas. Al cambiar la marca, el tipo o el SKU, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
-      $('#tb').innerHTML = `<table><thead><tr><th>Pregunta</th><th>Enc.</th><th>Marca</th><th>Tipo</th><th>SKU / producto</th><th>Origen</th></tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${sel('cg' + i, GRUPOS, r.grupo, `data-k="${esc(r.clave)}" aria-label="Marca de ${esc(r.pregunta)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}" aria-label="Tipo de ${esc(r.pregunta)}"`)}</td><td><input id="cs${i}" value="${esc(r.marca || '')}" maxlength="80" style="min-width:180px" aria-label="SKU o producto de ${esc(r.pregunta)}"></td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
+      rows = rows.filter((r) => (!en || r.encuesta === en) && (!or || (or === 'sin' ? r.grupo === 'SIN CLASIFICAR' : r.origen === or)) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
+      rows.sort((a, b) => (b.grupo === 'SIN CLASIFICAR') - (a.grupo === 'SIN CLASIFICAR')); const nSin = rows.filter((r) => r.grupo === 'SIN CLASIFICAR').length;
+      $('#info').textContent = `${rows.length} preguntas${nSin ? ` (${nSin} sin clasificar: elige su marca y vuelve a cargar la encuesta)` : ''}. Al cambiar la marca, el tipo o el SKU, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
+      $('#tb').innerHTML = `<table><thead><tr><th>Pregunta</th><th>Enc.</th><th>Marca</th><th>Tipo</th><th>SKU / producto</th><th>Origen</th></tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${sel('cg' + i, GRUPOS_CAT, r.grupo, `data-k="${esc(r.clave)}" aria-label="Marca de ${esc(r.pregunta)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}" aria-label="Tipo de ${esc(r.pregunta)}"`)}</td><td><input id="cs${i}" value="${esc(r.marca || '')}" maxlength="80" style="min-width:180px" aria-label="SKU o producto de ${esc(r.pregunta)}"></td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
       rows.slice(0, 300).forEach((r, i) => ['cg', 'ct', 'cs'].forEach((p) => { $('#' + p + i).onchange = async () => {
         const { error } = await sb.from('catalogo_share').update({ grupo: $('#cg' + i).value, tipo: $('#ct' + i).value, marca: $('#cs' + i).value.trim().slice(0, 80), origen: 'manual' }).eq('clave', r.clave).eq('encuesta', r.encuesta); error ? fail(error) : toast('Guardado'); }; }));
     };
