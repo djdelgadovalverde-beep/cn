@@ -11,7 +11,7 @@
   const pctV = (v) => (v > 1 ? v / 100 : v), div = (a, b) => (b ? a / b : null), sum4 = (a) => a.reduce((x, y) => x + y, 0);
   CN.PLAN = { TIPOS, TN, DOW, sum4 };
   let RUT = null;
-  async function rutero() { if (RUT) return RUT; const rows = await CN.fetchPar((o) => sb.from('rutero').select('*', o).order('codigo')); return (RUT = Object.fromEntries(rows.filter((r) => r.activo !== false).map((r) => [r.codigo, r]))); }
+  async function rutero() { if (RUT) return RUT; const rows = await CN.fetchPar((o) => sb.from('rutero').select('*', o).order('codigo')); return (RUT = Object.fromEntries(rows.filter((r) => r.activo !== false && !CN.ecmOff(r.ecm)).map((r) => [r.codigo, r]))); }
   CN.PLAN.rutero = rutero; CN.PLAN.invalidar = () => { RUT = null; };
 
   /* reparte un total entre elementos en proporción a su holgura, sin pasarse de ella */

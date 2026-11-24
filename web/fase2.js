@@ -183,10 +183,10 @@
     let pgG = 0;
     const load = async () => {
       const [d, h] = range($('#mes').value);
-      let rows = await fetchAll(() => sb.from('ganancias').select('*').gte('fecha', d).lte('fecha', h).order('id'));
+      let rows = CN.sinOff(await fetchAll(() => sb.from('ganancias').select('*').gte('fecha', d).lte('fecha', h).order('id')));
       const q = norm($('#q').value); if (q) rows = rows.filter((r) => norm(`${r.ecm} ${r.codigo} ${r.pdv}`).includes(q));
       const A = {}; rows.forEach((r) => { const e = (A[r.ecm || '—'] ||= { sup: r.supervisor, n: 0, p: 0, f: 0, s: 0, r: 0 }); e.n++; e.p += r.percha; e.f += r.frio; e.s += r.seco; e.r += r.ruma; });
-      const VE = {}; (await CN.fetchPar((o) => sb.from('visitas').select('ecm', o).eq('categoria', 'E').gte('fecha', d).lte('fecha', h).order('id'))).forEach((x) => (VE[x.ecm] = (VE[x.ecm] || 0) + 1));
+      const VE = {}; CN.sinOff(await CN.fetchPar((o) => sb.from('visitas').select('ecm', o).eq('categoria', 'E').gte('fecha', d).lte('fecha', h).order('id'))).forEach((x) => (VE[x.ecm] = (VE[x.ecm] || 0) + 1));
       const T = Object.values(A).reduce((a, e) => ({ p: a.p + e.p, f: a.f + e.f, s: a.s + e.s, r: a.r + e.r }), { p: 0, f: 0, s: 0, r: 0 });
       $('#res').innerHTML = `<div class="grid" style="margin-bottom:16px"><div class="kpi"><b>${T.p}</b><span>Caras de percha</span></div><div class="kpi"><b>${T.f}</b><span>Bandeja frío</span></div><div class="kpi"><b>${T.s}</b><span>Bandeja seco</span></div><div class="kpi"><b>${T.r}</b><span>Rumas</span></div></div>
       <div class="card"><div class="tw"><table><thead><tr><th>ECM</th><th>Supervisor</th><th class="n">Visitas con ganancia</th><th class="n">Efectividad</th><th class="n">Percha</th><th class="n">Frío</th><th class="n">Seco</th><th class="n">Ruma</th></tr></thead><tbody>${Object.entries(A).sort().map(([k, e]) => `<tr><td>${esc(k)}</td><td>${esc(e.sup || '')}</td><td class="n">${e.n}</td><td class="n">${VE[k] ? Math.min(100, (e.n / VE[k]) * 100).toFixed(1) + '%' : '—'}</td><td class="n">${e.p}</td><td class="n">${e.f}</td><td class="n">${e.s}</td><td class="n">${e.r}</td></tr>`).join('') || '<tr><td colspan="8" class="note">Sin datos.</td></tr>'}</tbody></table></div><p class="note">Efectividad = visitas con ganancia ÷ visitas efectivas del ECM en el mes.</p></div>`;
@@ -281,8 +281,8 @@
         fetchAll(() => sb.from('tareas').select('id,ecm,supervisor').neq('categoria', 'E').gte('fecha', d).lte('fecha', h).order('id')),
         fetchAll(() => sb.from('justificaciones').select('tipo,registro_id').gte('fecha', d).lte('fecha', h).order('id'))]);
       const hecho = new Set(J.map((x) => x.tipo + '|' + x.registro_id)), A = {};
-      V.filter((x) => !hecho.has('vis|' + x.id)).forEach((x) => { (A[x.ecm] ||= { sup: x.supervisor, v: 0, t: 0 }).v++; });
-      T.filter((x) => !hecho.has('tar|' + x.id)).forEach((x) => { (A[x.ecm] ||= { sup: x.supervisor, v: 0, t: 0 }).t++; });
+      CN.sinOff(V).filter((x) => !hecho.has('vis|' + x.id)).forEach((x) => { (A[x.ecm] ||= { sup: x.supervisor, v: 0, t: 0 }).v++; });
+      CN.sinOff(T).filter((x) => !hecho.has('tar|' + x.id)).forEach((x) => { (A[x.ecm] ||= { sup: x.supervisor, v: 0, t: 0 }).t++; });
       const mes = $('#mes').value;
       $('#tb').innerHTML = `<table><thead><tr><th>ECM</th><th>Nombre</th><th>Supervisor</th><th class="n">Visitas</th><th class="n">Tareas</th><th>Aviso</th></tr></thead><tbody>${Object.entries(A).sort((a, b) => (b[1].v + b[1].t) - (a[1].v + a[1].t)).map(([k, e]) => {
         const mp = S.ecmMap.find((x) => ecmNorm(x.ecm) === k) || {}; let tel = String(mp.telefono || '').replace(/\D/g, ''); if (tel.startsWith('0')) tel = '593' + tel.slice(1);

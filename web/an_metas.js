@@ -42,7 +42,7 @@
   async function avance(m) {
     const r = rango(m.mes), tipos = lista(m.tipos).length ? lista(m.tipos) : [];
     if (m.modo === 'ganadas') {
-      const G = await CN.fetchPar((o) => sb.from('ganancias').select('fecha,codigo,ecm,supervisor,cadena,percha,frio,seco,ruma', o).gte('fecha', r.d).lte('fecha', r.h).order('id'));
+      const G = CN.sinOff(await CN.fetchPar((o) => sb.from('ganancias').select('fecha,codigo,ecm,supervisor,cadena,percha,frio,seco,ruma', o).gte('fecha', r.d).lte('fecha', r.h).order('id')));
       const e = lista(m.ecms).map((x) => ecmNorm(x)), s = lista(m.supervisores).map(norm), c = lista(m.cadenas).map(norm), p = lista(m.pdvs), t = tipos.map((x) => ({ PERCHA: 'percha', 'BANDEJA FRÍO': 'frio', 'BANDEJA SECO': 'seco', RUMA: 'ruma' })[x]).filter(Boolean);
       const sel = G.filter((g) => (!e.length || e.includes(ecmNorm(g.ecm || ''))) && (!s.length || s.includes(norm(g.supervisor || ''))) && (!c.length || c.includes(norm(g.cadena || ''))) && (!p.length || p.includes(g.codigo)));
       return { actual: sel.reduce((a, g) => a + (t.length ? t : ['percha', 'frio', 'seco', 'ruma']).reduce((b, k) => b + (g[k] || 0), 0), 0), meta: m.valor, pct: true === false ? null : null, rango: r };

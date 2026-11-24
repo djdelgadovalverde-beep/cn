@@ -36,7 +36,7 @@
     const [rows, js] = await Promise.all([CN.fetchPar((o) => aplicar(sb.from(tabla).select(cols, o).gte('fecha', d).lte('fecha', h), ['reg', 'ger', 'sup', 'ecm']).order('id')),
       CN.fetchPar((o) => aplicar(sb.from('justificaciones').select('id,registro_id,motivo,responsable,observacion,estado,creado_en,revisado_en', o).eq('tipo', tp).gte('fecha', d).lte('fecha', h), ['sup', 'ecm']).order('id'))]);
     const J = {}; js.forEach((j) => (J[j.registro_id] = j));
-    const R = rows.map((x) => {
+    const R = CN.sinOff(rows).map((x) => {
       const j = J[x.id] || null, dt = x.detalle || {};
       return { id: x.id, d: x.fecha, day: x.fecha, reg: x.region || '—', ger: x.gerencia || '—', sup: x.supervisor || '—', ecm: x.ecm, cli: x.codigo_cliente || '—', cn: x.cliente || '—', c: x.categoria, min: dt.min == null ? null : Number(dt.min),
         pil: x.pilar || '—', task: x.descripcion || '—', jtxt: dt.just_nc || dt.just_fr || x.estado || '', frio: !!x.es_frio, jus: dt.justificacion || 'SIN JUSTIFICACIÓN', st: x.estado || '', j, jv: !!j && j.estado !== 'rechazada' && j.responsable === 'CN' && x.categoria !== 'E', jad: !!j && j.estado !== 'rechazada' && j.responsable !== 'CN' && x.categoria !== 'E' && !!(S.motivos.find((mo) => mo.motivo === j.motivo) || {}).excluye_adicional, gps: dt.gps, ejec: dt.ejecucion, fotos: dt.estado_fotos || '' };

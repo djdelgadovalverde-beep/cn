@@ -255,12 +255,14 @@
       const nom = TXT(g(r, 'NOMBRE')).replace(/\s+/g, ' ').slice(0, 120), sup = TXT(g(r, 'SUPERVISOR')).replace(/\s+/g, ' ').toUpperCase().slice(0, 120);
       const o = act[e], m = { ecm: e, nombre: (o && o.nombre) || '', telefono: (o && o.telefono) || '', supervisor: (o && o.supervisor) || '', origen: (o && o.origen) || 'manual' };
       if (nom) m.nombre = nom; if (tel) m.telefono = tel; if (sup) { m.supervisor = sup; m.origen = 'manual'; }
-      if (!o) nuevos++; else if (['nombre', 'telefono', 'supervisor'].some((k) => (o[k] || '') !== (m[k] || ''))) actualizados++; else return;
+      m.activo = o ? o.activo !== false : true; const ev = norm(TXT(g(r, 'ESTADO') || g(r, 'ACTIVO'))); if (/^(INACTIVO|INACTIVE|NO|0|FALSE|BAJA|DESACTIVADO)$/.test(ev)) m.activo = false; else if (/^(ACTIVO|ACTIVE|SI|1|TRUE|ALTA|ACTIVADO)$/.test(ev)) m.activo = true;
+      if (!o) nuevos++; else if (['nombre', 'telefono', 'supervisor'].some((k) => (o[k] || '') !== (m[k] || '')) || (o.activo !== false) !== m.activo) actualizados++; else return;
       out.push(m);
     });
     if (out.length) { const { error } = await sb.from('ecm_map').upsert(out, { onConflict: 'ecm' }); if (error) throw error; }
     say('Aplicando supervisores a todas las bases…');
     const { data: prop, error: e2 } = await sb.rpc('ecm_propagar'); if (e2) throw e2;
+    S.ecmMap = (await sb.from('ecm_map').select('*')).data || []; CN.ecmSync();
     return { tp: 'ecm', filas: rows.length - desc, descartadas: desc, nuevas: nuevos, actualizadas: actualizados, iguales: rows.length - desc - nuevos - actualizados, propagado: prop };
   }
 
@@ -386,19 +388,19 @@
   NAV.ecm = ['Equipo ECM', ['admin', 'gerencia']];
   const t = { carga: NAV.carga, admin: NAV.admin }; delete NAV.carga; delete NAV.admin; NAV.carga = t.carga; NAV.admin = t.admin;
   VIEWS.ecm = async function () {
-    const m = $('#main'); let q = '';
+    const m = $('#main'); let q = '', fe = 'todos';
     const draw = async () => {
       const { data, error } = await sb.from('ecm_map').select('*').order('ecm'); if (error) throw error;
-      const f = norm(q), L = (data || []).filter((x) => !f || norm(`${x.ecm} ${x.nombre} ${x.supervisor}`).includes(f)), sinSup = (data || []).filter((x) => !(x.supervisor || '').trim()).length;
-      m.innerHTML = `<div class="fbar"><label>Buscar<input id="e_q" value="${esc(q)}" placeholder="ECM, nombre o supervisor"></label><button id="e_sync">Completar desde las bases</button><button id="e_prop" class="pri">Aplicar supervisores a todas las bases</button><button id="e_new">Agregar ECM</button><button id="e_tpl" title="Descarga la plantilla de Excel con los ECM actuales para editarlos y volver a subirlos">Plantilla Excel</button></div>
-        <div class="card"><h2>Equipo ECM</h2><p class="note">${(data || []).length} ECM · ${sinSup} sin supervisor. El supervisor de esta tabla manda sobre el que traigan los archivos. Después de editar, pulsa «Aplicar» para actualizar las bases ya cargadas.</p>
-        <div class="tw"><table><thead><tr><th>ECM</th><th>Nombre</th><th>Teléfono</th><th>Supervisor</th><th>Origen</th><th></th></tr></thead><tbody>${L.map((x) => `<tr><td>${esc(x.ecm)}</td>
+      const f = norm(q), L = (data || []).filter((x) => (!f || norm(`${x.ecm} ${x.nombre} ${x.supervisor}`).includes(f)) && (fe === 'todos' || (fe === 'act') === (x.activo !== false))), nAct = (data || []).filter((x) => x.activo !== false).length, sinSup = (data || []).filter((x) => !(x.supervisor || '').trim()).length;
+      m.innerHTML = `<div class="fbar"><label>Buscar<input id="e_q" value="${esc(q)}" placeholder="ECM, nombre o supervisor"></label><label>Estado<select id="e_fe"><option value="todos" ${fe === 'todos' ? 'selected' : ''}>Todos</option><option value="act" ${fe === 'act' ? 'selected' : ''}>Activos</option><option value="ina" ${fe === 'ina' ? 'selected' : ''}>Inactivos</option></select></label><button id="e_sync">Completar desde las bases</button><button id="e_prop" class="pri">Aplicar supervisores a todas las bases</button><button id="e_new">Agregar ECM</button><button id="e_tpl" title="Descarga la plantilla de Excel con los ECM actuales para editarlos y volver a subirlos">Plantilla Excel</button></div>
+        <div class="card"><h2>Equipo ECM</h2><p class="note">${(data || []).length} ECM (${nAct} activos, ${(data || []).length - nAct} inactivos) · ${sinSup} sin supervisor. Un ECM <b>inactivo</b> no se considera en gráficos, rankings, puntaje, SOS/SOE ni plan. El supervisor de esta tabla manda sobre el que traigan los archivos. Después de editar, pulsa «Aplicar» para actualizar las bases ya cargadas.</p>
+        <div class="tw"><table><thead><tr><th>ECM</th><th>Nombre</th><th>Teléfono</th><th>Supervisor</th><th>Estado</th><th>Origen</th><th></th></tr></thead><tbody>${L.map((x) => `<tr class="${x.activo === false ? 'ina' : ''}"><td>${esc(x.ecm)}</td>
           <td><input aria-label="Nombre de ${esc(x.ecm)}" data-e="${esc(x.ecm)}" data-f="nombre" value="${esc(x.nombre || '')}" style="min-width:160px"></td><td><input aria-label="Teléfono de ${esc(x.ecm)}" data-e="${esc(x.ecm)}" data-f="telefono" value="${esc(x.telefono || '')}" style="width:130px" inputmode="tel"></td>
-          <td><input aria-label="Supervisor de ${esc(x.ecm)}" data-e="${esc(x.ecm)}" data-f="supervisor" value="${esc(x.supervisor || '')}" style="min-width:180px"></td><td><span class="pill ${x.origen === 'auto' ? 'F' : 'E'}">${esc(x.origen || 'manual')}</span></td><td><button class="bad" data-x="${esc(x.ecm)}">Quitar</button></td></tr>`).join('') || '<tr><td colspan="6" class="note">Sin ECM. Súbelos en «Cargar bases» o pulsa «Completar desde las bases».</td></tr>'}</tbody></table></div></div>`;
+          <td><input aria-label="Supervisor de ${esc(x.ecm)}" data-e="${esc(x.ecm)}" data-f="supervisor" value="${esc(x.supervisor || '')}" style="min-width:180px"></td><td><select aria-label="Estado de ${esc(x.ecm)}" data-ea="${esc(x.ecm)}"><option value="1" ${x.activo !== false ? 'selected' : ''}>Activo</option><option value="0" ${x.activo === false ? 'selected' : ''}>Inactivo</option></select></td><td><span class="pill ${x.origen === 'auto' ? 'F' : 'E'}">${esc(x.origen || 'manual')}</span></td><td><button class="bad" data-x="${esc(x.ecm)}">Quitar</button></td></tr>`).join('') || '<tr><td colspan="6" class="note">Sin ECM. Súbelos en «Cargar bases» o pulsa «Completar desde las bases».</td></tr>'}</tbody></table></div></div>`;
       $('#e_q').oninput = (ev) => { q = ev.target.value; clearTimeout(draw.t); draw.t = setTimeout(() => draw().catch(fail), 350); };
       $('#e_sync').onclick = async () => { const { data: n, error: e } = await sb.rpc('ecm_sync'); e ? fail(e) : (toast(`ECM completados: ${n}`), draw().catch(fail)); };
       $('#e_prop').onclick = async () => { const { data: r, error: e } = await sb.rpc('ecm_propagar'); e ? fail(e) : toast('Supervisores aplicados: ' + Object.entries(r).map(([k, v]) => `${k} ${v}`).join(' · ')); };
-      $('#e_tpl').onclick = () => { const A = [['ECM', 'NOMBRE', 'TELEFONO', 'SUPERVISOR'], ...(data || []).map((x) => [x.ecm, x.nombre || '', x.telefono || '', x.supervisor || ''])], ws = XLSX.utils.aoa_to_sheet(A);
+      $('#e_tpl').onclick = () => { const A = [['ECM', 'NOMBRE', 'TELEFONO', 'SUPERVISOR', 'ESTADO'], ...(data || []).map((x) => [x.ecm, x.nombre || '', x.telefono || '', x.supervisor || '', x.activo === false ? 'INACTIVO' : 'ACTIVO'])], ws = XLSX.utils.aoa_to_sheet(A);
         for (let k = 1; k < A.length; k++) { const c3 = ws['C' + (k + 1)]; if (c3) { c3.t = 's'; c3.z = '@'; } else ws['C' + (k + 1)] = { t: 's', v: '', z: '@' }; } ws['!cols'] = [{ wch: 12 }, { wch: 34 }, { wch: 16 }, { wch: 28 }];
         const ins = XLSX.utils.aoa_to_sheet([['Cómo llenar esta plantilla'], [''], ['1. Hoja ECM: una fila por ECM (mercaderista). No cambies los encabezados: ECM, NOMBRE, TELEFONO, SUPERVISOR.'], ['2. Puedes agregar ECM nuevos al final: si el código no existe se crea; si ya existe se sustituyen sus datos.'], ['3. Una celda vacía no borra lo que ya está guardado.'], ['4. TELEFONO: escríbelo como texto (con el 0 inicial). SUPERVISOR es opcional; si lo llenas, ese ECM se asigna a ese supervisor.'], ['5. Guarda el archivo y súbelo en «Cargar bases»: el sistema lo reconoce solo.']]); ins['!cols'] = [{ wch: 110 }];
         const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'ECM'); XLSX.utils.book_append_sheet(wb, ins, 'Instrucciones'); XLSX.writeFile(wb, 'Plantilla_ECM.xlsx'); };
@@ -409,6 +411,9 @@
         const row = { [i.dataset.f]: v }; if (i.dataset.f === 'supervisor') row.origen = 'manual';
         const { error: er } = await sb.from('ecm_map').update(row).eq('ecm', i.dataset.e); er ? fail(er) : toast('Guardado (recuerda «Aplicar» si cambiaste el supervisor)');
       }));
+      $('#e_fe').onchange = (ev) => { fe = ev.target.value; draw().catch(fail); };
+      document.querySelectorAll('[data-ea]').forEach((s) => (s.onchange = async () => { const on = s.value === '1'; const { error: er } = await sb.from('ecm_map').update({ activo: on }).eq('ecm', s.dataset.ea); if (er) return fail(er);
+        S.ecmMap = (await sb.from('ecm_map').select('*')).data || []; CN.ecmSync(); if (CN.invalidarAnalisis) CN.invalidarAnalisis(); if (CN.invalidarShare) CN.invalidarShare(); if (CN.PLAN && CN.PLAN.invalidar) CN.PLAN.invalidar(); toast(on ? 'ECM activado: vuelve a contar en los gráficos' : 'ECM desactivado: ya no cuenta en los gráficos'); draw().catch(fail); }));
       document.querySelectorAll('[data-x]').forEach((b) => (b.onclick = async () => { if (!confirm('¿Quitar este ECM de la tabla?')) return; const { error: er } = await sb.from('ecm_map').delete().eq('ecm', b.dataset.x); er ? fail(er) : draw().catch(fail); }));
     };
     await draw();

@@ -37,6 +37,9 @@ const VIEWS = {};
 /* registro de accesos (lo ve solo el administrador): ingreso, sesión retomada y pantallas visitadas */
 window.CN = window.CN || {};
 CN.logAcc = (evento, vista) => { try { if (!S.me) return; sb.from('accesos').insert({ usuario: S.me.id, evento, vista: vista || null, agente: (navigator.userAgent || '').slice(0, 160) }).then(() => { }, () => { }); } catch (e) { } };
+CN.ecmSync = () => { CN.ecmInact = new Set((S.ecmMap || []).filter((e) => e.activo === false).map((e) => String(e.ecm || '').trim().toUpperCase())); };
+CN.ecmOff = (e) => !!CN.ecmInact && CN.ecmInact.has(String(e || '').trim().toUpperCase());
+CN.sinOff = (rows) => (CN.ecmInact && CN.ecmInact.size ? rows.filter((x) => !CN.ecmOff(x.ecm)) : rows);
 async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return loginView();
@@ -48,7 +51,7 @@ async function boot() {
   S.me.perfil = p.rol; S.me.perfilNombre = def.nombre; S.me.def = def; S.me.rol = def.base;
   const [c, m, e] = await Promise.all([sb.from('config').select('*'), sb.from('motivos').select('*').eq('activo', true).order('motivo'), sb.from('ecm_map').select('*')]);
   S.cfg = Object.fromEntries((c.data || []).map((r) => [r.clave, r.valor]));
-  S.motivos = m.data || []; S.ecmMap = e.data || [];
+  S.motivos = m.data || []; S.ecmMap = e.data || []; CN.ecmSync();
   shell();
   try { const ss = window.sessionStorage; if (ss.getItem('cn_login')) { ss.removeItem('cn_login'); ss.setItem('cn_ses', '1'); CN.logAcc('login'); } else if (!ss.getItem('cn_ses')) { ss.setItem('cn_ses', '1'); CN.logAcc('sesion'); } } catch (e) { CN.logAcc('sesion'); }
 }
@@ -375,7 +378,7 @@ async function carga() {
         if (error) throw error;
       }
       out.textContent = `Listo: ${data.length} registros cargados.`;
-      if (k === 'ecm') S.ecmMap = (await sb.from('ecm_map').select('*')).data || [];
+      if (k === 'ecm') { S.ecmMap = (await sb.from('ecm_map').select('*')).data || []; CN.ecmSync(); }
     } catch (e) { out.textContent = ''; fail(e); } finally { b.disabled = false; }
   });
 }

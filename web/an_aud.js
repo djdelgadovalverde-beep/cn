@@ -37,7 +37,7 @@
   async function evolucion() {
     const hasta = ST.to, d = new Date(hasta + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() - 11); const desde = d.toISOString().slice(0, 8) + '01';
     const J = await CN.fetchPar((o) => (() => { let q = sb.from('justificaciones').select('tipo,fecha,motivo,responsable,estado,ecm,supervisor', o).gte('fecha', desde).lte('fecha', hasta); if (ST.sup.length) q = q.in('supervisor', ST.sup); if (ST.tipo.length) q = q.in('tipo', ST.tipo); return q.order('id'); })());
-    const L = J.filter((x) => (!ST.sup.length || ST.sup.includes(x.supervisor)) && (!ST.tipo.length || ST.tipo.includes(x.tipo))), ms = [...new Set(L.map((x) => x.fecha.slice(0, 7)))].sort();
+    const L = CN.sinOff(J).filter((x) => (!ST.sup.length || ST.sup.includes(x.supervisor)) && (!ST.tipo.length || ST.tipo.includes(x.tipo))), ms = [...new Set(L.map((x) => x.fecha.slice(0, 7)))].sort();
     const top = Object.entries(L.reduce((a, x) => ((a[x.motivo] = (a[x.motivo] || 0) + 1), a), {})).sort((a, b) => b[1] - a[1]).slice(0, 7).map((x) => x[0]);
     const lab = (m) => ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'][+m.slice(5) - 1] + ' ' + m.slice(2, 4);
     const segs = top.map((m, i) => ({ n: m, c: COL[i], d: ms.map((k) => L.filter((x) => x.fecha.slice(0, 7) === k && x.motivo === m).length) }));

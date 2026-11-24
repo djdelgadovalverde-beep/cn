@@ -9,7 +9,7 @@
   DB.config = Object.entries(cfg).map(([clave, valor]) => ({ clave, valor: String(valor) }));
   DB.motivos = [{ id: 1, tipo: 'ambos', motivo: 'Cliente cerrado', responsable: 'CN', activo: true, excluye_adicional: false }, { id: 2, tipo: 'ambos', motivo: 'Falta de tiempo', responsable: 'SGF', activo: true, excluye_adicional: true }, { id: 3, tipo: 'vis', motivo: 'Falla GPS', responsable: 'CN', activo: true }];
   DB.profiles = [{ id: 'u1', usuario: 'admin', nombre: 'Administrador', rol: 'admin', activo: true, ecm_code: null, supervisor: null }];
-  DB.ecm_map = ECMS.map((e) => ({ ecm: e.ecm, nombre: 'Nombre ' + e.ecm, telefono: '0991234567', supervisor: e.sup, origen: 'manual' }));
+  DB.ecm_map = ECMS.map((e) => ({ ecm: e.ecm, nombre: 'Nombre ' + e.ecm, telefono: '0991234567', supervisor: e.sup, origen: 'manual', activo: true }));
   const cads = ['TIA', 'SUPERMAXI', 'MI COMISARIATO', 'TIENDA'], regs = ['SIERRA', 'COSTA'];
   const PDV = []; for (let i = 0; i < 60; i++) { const e = ECMS[i % ECMS.length]; PDV.push({ codigo: String(1000 + i), pdv: 'LOCAL ' + (1000 + i), region: regs[i % 2], cadena: cads[i % 4], ciudad: 'QUITO', supervisor: e.sup, ecm: e.ecm, dia_visita: 'LUNES' }); }
   DB.rutero = PDV; DB.rutero.forEach((r, i) => { r.activo = i % 5 !== 0; r.estado_manual = i % 10 === 0; r.ult_dato = '2026-11-15'; r.inactivo_desde = r.activo ? null : '2026-10-20'; });
