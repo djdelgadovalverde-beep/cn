@@ -23,7 +23,7 @@
     return out;
   };
 
-  const NOMBRE = { vis: 'Visitas', tar: 'Tareas', rut: 'Rutero', ecm: 'ECM → supervisor', enl: 'Enlaces de fotos (Involves)', gan: 'Espacios ganados', enc: 'Encuestas SOS / SOE', meta: 'Metas' };
+  const NOMBRE = { vis: 'Visitas', tar: 'Tareas', rut: 'Rutero', ecm: 'ECM → supervisor', enl: 'Enlaces de fotos (Involves)', gan: 'Espacios ganados', enc: 'Encuestas SOS / SOE', meta: 'Metas', pdv: 'PDV activos / inactivos' };
   const CATL = { vis: { P: 'Perdida', F: 'Fuera de rango', M: 'Menos de 2 min' }, tar: { M: 'Mal ejecutada', F: 'Justificada', P: 'Abierta' } };
   CN.CATL = CATL;
   const normReg = (v) => norm(v).replace(/^REGION\s+/, '').replace(/\s*KKAA.*$/, '');
@@ -94,7 +94,9 @@
       const ws = wb.Sheets[n], j = XLSX.utils.sheet_to_json(ws, { defval: null, raw: true }); if (!j.length) continue;
       const orig = Object.keys(j[0]), keys = orig.map(key), tp = detectar(keys); if (!tp) continue;
       const kk = {}; orig.forEach((k) => (kk[key(k)] = k));
-      const rows = j.map((r) => { const o = {}; orig.forEach((k) => (o[key(k)] = r[k])); return o; });
+      /* columnas numéricas (0, 1, -1…) con formato de fecha en Excel: SheetJS las devuelve como fechas de 1899-1900 → se vuelven al número */
+      const cel = (v) => (v instanceof Date && v.getTime() < -2203891200000 ? Math.round(v.getTime() / 864e5 + 25569) : v);
+      const rows = j.map((r) => { const o = {}; orig.forEach((k) => (o[key(k)] = cel(r[k]))); return o; });
       if (tp === 'tar' && kk.URLLINK) hipervinculos(ws, j, kk.URLLINK, rows);
       return { tp, rows, keys, file: f };
     }
@@ -354,6 +356,13 @@
         else if (tp === 'meta') { if (!window.CN.cargarMetas) throw new Error('El módulo de metas no está disponible.'); r = await window.CN.cargarMetas(c.rows, say); }
         RES.push(r);
         await sb.from('cargas').insert({ tipo: tp === 'enc' ? 'enc' : tp, modo: tp === 'vis' || tp === 'tar' ? modo : null, archivo: c.file.name.slice(0, 200), filas: r.filas || null, nuevas: r.nuevas || null, actualizadas: r.actualizadas || null, iguales: r.iguales || null, borradas: r.borradas || null, detalle: { trans: r.trans || null, motivoEfectivas: r.motivoEfectivas || null } });
+      }
+      if (L.some((x) => ['rut', 'vis', 'tar', 'enc', 'gan'].includes(x.tp))) { /* el estado de los PDV sigue a los datos que se suben */
+        say('Actualizando PDV activos / inactivos…'); const o = document.createElement('div');
+        try { const { data, error } = await sb.rpc('pdv_recalcular_estado'); if (error) throw error;
+          o.textContent = data && data.ok === false ? 'Sin datos para calcular.' : !data.historial_suficiente ? `Aún no hay ${data.semanas} semanas de datos para decidir; ningún PDV cambió.` : `${data.desactivados} desactivados (sin datos en ${data.semanas} semanas) · ${data.reactivados} reactivados.`;
+        } catch (e) { o.textContent = 'No se pudo actualizar (' + String((e && e.message) || e).slice(0, 120) + '). Puedes hacerlo en Rutero y ubicación → «Recalcular estado».'; }
+        RES.push({ tp: 'pdv', node: o, filas: null }); if (CN.PLAN && CN.PLAN.invalidar) CN.PLAN.invalidar();
       }
       CARGA = []; if (CN.invalidarAnalisis) CN.invalidarAnalisis(); if (CN.invalidarShare) CN.invalidarShare(); toast('Carga terminada');
     } catch (e) { console.error('Carga detenida en:', paso, e); const msg2 = String((e && (e.message || e.details || e.hint)) || e); ERRCARGA = { paso, msg: msg2 + (e && e.code ? ' (código ' + e.code + ')' : ''), ayuda: AYUDA(msg2 + ' ' + (e && e.code || '')) }; } finally { pintar(); }

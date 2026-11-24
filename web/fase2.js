@@ -327,19 +327,27 @@
   /* ======================= Rutero y ubicación ======================= */
   VIEWS.rutero = async function () {
     const m = $('#main');
-    m.innerHTML = `<div class="bar"><label>Buscar PDV<input id="q" placeholder="Código, nombre, ECM o ciudad"></label></div><div class="card"><div class="tws" id="tb"></div><p class="note" id="info"></p></div>`;
+    const adm = S.me.rol === 'admin'; let est = 'todos';
+    m.innerHTML = `<div id="rk"></div><div class="bar"><label>Buscar PDV<input id="q" placeholder="Código, nombre, ECM o ciudad"></label><label>Estado<select id="fe"><option value="todos">Todos</option><option value="act">Activos</option><option value="ina">Inactivos</option></select></label>${adm ? '<button type="button" id="rc" title="Vuelve a calcular qué PDV llevan varias semanas sin datos">Recalcular estado</button>' : ''}</div><div class="card"><div class="tws" id="tb"></div><p class="note" id="info"></p><p class="note">Un PDV pasa a <b>inactivo</b> solo cuando lleva ${S.cfg.pdv_semanas_inactivo || 3} semanas sin datos (visitas, tareas, encuestas o espacios ganados) y vuelve a <b>activo</b> si reaparecen datos. Si lo cambias a mano, la regla automática no lo toca hasta que lo devuelvas a «automático».</p></div>`;
     let pgR = 0; const PSR = 25;
     const load = async () => {
       let q = sb.from('rutero').select('*', { count: 'exact' }).order('codigo').range(pgR * PSR, pgR * PSR + PSR - 1);
+      if (est === 'act') q = q.eq('activo', true); else if (est === 'ina') q = q.eq('activo', false);
       const t = $('#q').value.trim().replace(/[,()%]/g, ' ');
       if (t) q = q.or(`codigo.ilike.%${t}%,pdv.ilike.%${t}%,ecm.ilike.%${t}%,ciudad.ilike.%${t}%`);
       const { data, error, count } = await q; if (error) return fail(error); const totR = count ?? data.length, npR = Math.max(1, Math.ceil(totR / PSR));
       const cods = (data || []).map((x) => x.codigo);
       const U = cods.length ? Object.fromEntries(((await sb.from('ubicaciones').select('*').in('codigo', cods)).data || []).map((x) => [x.codigo, x])) : {};
       $('#info').innerHTML = `${totR} PDV${npR > 1 ? ` · <span class="pager"><button data-gr="-1" ${pgR === 0 ? 'disabled' : ''}>‹</button> Pág. ${pgR + 1} de ${npR} <button data-gr="1" ${pgR >= npR - 1 ? 'disabled' : ''}>›</button></span>` : ''}`; document.querySelectorAll('[data-gr]').forEach((b) => (b.onclick = () => { pgR = Math.max(0, pgR + +b.dataset.gr); load(); }));
-      $('#tb').innerHTML = `<table><thead><tr><th>Código</th><th>PDV</th><th>Cadena</th><th>Ciudad</th><th>ECM</th><th>Día</th><th>Ubicación</th></tr></thead><tbody>${data.map((r) => { const u = U[r.codigo];
-        return `<tr><td>${esc(r.codigo)}</td><td>${esc(r.pdv || '')}</td><td>${esc(r.cadena || '')}</td><td>${esc(r.ciudad || '')}</td><td>${esc(r.ecm || '')}</td><td>${esc(r.dia_visita || '')}</td>
-        <td>${u ? `<a href="https://www.google.com/maps?q=${u.lat},${u.lng}" target="_blank" rel="noopener noreferrer">Ver mapa</a> ` : ''}<button data-u="${esc(r.codigo)}">${u ? 'Cambiar' : 'Agregar'}</button></td></tr>`; }).join('') || '<tr><td colspan="7" class="note">Sin resultados.</td></tr>'}</tbody></table>`;
+      $('#tb').innerHTML = `<table><thead><tr><th>Código</th><th>PDV</th><th>Cadena</th><th>Ciudad</th><th>ECM</th><th>Día</th><th>Estado</th><th>Ubicación</th></tr></thead><tbody>${data.map((r) => { const u = U[r.codigo], ina = r.activo === false, fd = (d) => (d ? String(d).split('-').reverse().join('/') : '—');
+        const estC = `<span class="st ${ina ? 'pend' : 'jf'}">${ina ? 'Inactivo' : 'Activo'}</span>${r.estado_manual ? ' <small class="mu" title="Fijado a mano: la regla automática no lo cambia">manual</small>' : ''}<br><small class="mu">${ina ? 'Sin datos desde ' + fd(r.inactivo_desde || r.ult_dato) : 'Último dato ' + fd(r.ult_dato)}</small>${adm ? `<br><button data-est="${esc(r.codigo)}|${ina ? 1 : 0}">${ina ? 'Activar' : 'Desactivar'}</button>${r.estado_manual ? ` <button data-auto="${esc(r.codigo)}" title="Vuelve a decidirse por los datos">Automático</button>` : ''}` : ''}`;
+        return `<tr class="${ina ? 'ina' : ''}"><td>${esc(r.codigo)}</td><td>${esc(r.pdv || '')}</td><td>${esc(r.cadena || '')}</td><td>${esc(r.ciudad || '')}</td><td>${esc(r.ecm || '')}</td><td>${esc(r.dia_visita || '')}</td><td>${estC}</td>
+        <td>${u ? `<a href="https://www.google.com/maps?q=${u.lat},${u.lng}" target="_blank" rel="noopener noreferrer">Ver mapa</a> ` : ''}<button data-u="${esc(r.codigo)}">${u ? 'Cambiar' : 'Agregar'}</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="note">Sin resultados.</td></tr>'}</tbody></table>`;
+      const cnt = async (v) => (await sb.from('rutero').select('codigo', { count: 'exact', head: true }).eq('activo', v)).count;
+      Promise.all([cnt(true), cnt(false)]).then(([a, i]) => { const k = $('#rk'); if (k) k.innerHTML = `<div class="kp"><div class="k" style="--a:var(--cE)"><span>PDV activos</span><b>${(a ?? 0).toLocaleString('es-EC')}</b><i>con datos recientes</i></div><div class="k" style="--a:var(--cP)"><span>PDV inactivos</span><b>${(i ?? 0).toLocaleString('es-EC')}</b><i>${S.cfg.pdv_semanas_inactivo || 3} semanas o más sin datos, o desactivados a mano</i></div></div>`; });
+      document.querySelectorAll('[data-est]').forEach((b) => (b.onclick = async () => { const [c, act] = b.dataset.est.split('|'); const mot = act === '1' ? 'Activado a mano' : (prompt('Motivo para desactivar este PDV (opcional):', 'Cerrado / ya no se visita') || 'Desactivado a mano');
+        const { error } = await sb.from('rutero').update({ activo: act === '1', estado_manual: true, inactivo_desde: act === '1' ? null : new Date().toISOString().slice(0, 10), estado_motivo: mot, estado_actualizado: new Date().toISOString() }).eq('codigo', c); if (error) return fail(error); if (CN.PLAN && CN.PLAN.invalidar) CN.PLAN.invalidar(); toast(act === '1' ? 'PDV activado' : 'PDV desactivado'); load(); }));
+      document.querySelectorAll('[data-auto]').forEach((b) => (b.onclick = async () => { const { error } = await sb.from('rutero').update({ estado_manual: false }).eq('codigo', b.dataset.auto); if (error) return fail(error); const r = await sb.rpc('pdv_recalcular_estado'); if (r.error) return fail(r.error); if (CN.PLAN && CN.PLAN.invalidar) CN.PLAN.invalidar(); toast('El PDV vuelve a decidirse por los datos'); load(); }));
       document.querySelectorAll('[data-u]').forEach((b) => b.onclick = async () => {
         const t2 = prompt('Pega las coordenadas (ej. -0.1807, -78.4678) o el enlace de Google Maps:'); if (!t2) return;
         const mm = t2.match(/(-?\d{1,2}\.\d+)\s*[,;\s]\s*(-?\d{1,3}\.\d+)/); if (!mm) return toast('No pude leer las coordenadas');
@@ -348,6 +356,8 @@
       });
     };
     let dt; $('#q').oninput = () => { clearTimeout(dt); dt = setTimeout(() => { pgR = 0; load().catch(fail); }, 350); }; await load();
+    $('#fe').onchange = (e) => { est = e.target.value; pgR = 0; load(); };
+    if ($('#rc')) $('#rc').onclick = async () => { const { data, error } = await sb.rpc('pdv_recalcular_estado'); if (error) return fail(error); if (CN.PLAN && CN.PLAN.invalidar) CN.PLAN.invalidar(); toast(data && data.historial_suficiente === false ? `Aún no hay ${data.semanas} semanas de datos para decidir.` : `${data.desactivados} desactivados · ${data.reactivados} reactivados`); load(); };
   };
 
   /* ======================= Catálogo de marcas ======================= */

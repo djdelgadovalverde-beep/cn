@@ -12,7 +12,7 @@
   DB.ecm_map = ECMS.map((e) => ({ ecm: e.ecm, nombre: 'Nombre ' + e.ecm, telefono: '0991234567', supervisor: e.sup, origen: 'manual' }));
   const cads = ['TIA', 'SUPERMAXI', 'MI COMISARIATO', 'TIENDA'], regs = ['SIERRA', 'COSTA'];
   const PDV = []; for (let i = 0; i < 60; i++) { const e = ECMS[i % ECMS.length]; PDV.push({ codigo: String(1000 + i), pdv: 'LOCAL ' + (1000 + i), region: regs[i % 2], cadena: cads[i % 4], ciudad: 'QUITO', supervisor: e.sup, ecm: e.ecm, dia_visita: 'LUNES' }); }
-  DB.rutero = PDV;
+  DB.rutero = PDV; DB.rutero.forEach((r, i) => { r.activo = i % 5 !== 0; r.estado_manual = i % 10 === 0; r.ult_dato = '2026-11-15'; r.inactivo_desde = r.activo ? null : '2026-10-20'; });
   let id = 0;
   for (let d = 0; d < 40; d++) { const f = day(d); ECMS.forEach((e) => { for (let k = 0; k < 4; k++) { const p = pick(PDV), r = rnd(), c = r < 0.62 ? 'E' : r < 0.78 ? 'P' : r < 0.9 ? 'F' : 'M';
     DB.visitas.push({ id: 'V|' + f + '|' + p.codigo + '|' + e.ecm + '#' + ++id, fecha: f, region: p.region, gerencia: 'GV1', supervisor: e.sup, ecm: e.ecm, codigo_cliente: p.codigo, cliente: p.pdv, estado: 'X', categoria: c, programadas: 1, detalle: { min: c === 'M' ? 1 : Math.round(rnd() * 50), justificacion: 'SIN JUSTIFICACIÓN' } });
@@ -62,6 +62,7 @@
   }
   const weekStart = (iso, wsd) => { const d = new Date(iso + 'T00:00:00Z'), o = (d.getUTCDay() - wsd + 7) % 7; d.setUTCDate(d.getUTCDate() - o); return d.toISOString().slice(0, 10); };
   const RPC = {
+    pdv_recalcular_estado: () => ({ ok: true, desactivados: 2, reactivados: 1, corte: '2026-10-28', referencia: '2026-11-18', historial_suficiente: true, semanas: 3 }),
     admin_actividad: () => DB.profiles.map((p) => ({ usuario: p.id, ult_acceso: new Date().toISOString(), accesos: 3, dias_activos: 2, pantallas: 9, cambios: 1, ult_cambio: new Date().toISOString() })),
     plan_pdv_tipo: (a) => { const m = {}, wsd = 3; DB.share_detalle.filter((r) => r.fecha >= a.p_desde && r.fecha <= a.p_hasta && r.grupo !== 'EXCLUIR').forEach((r) => { const d = new Date(r.fecha + 'T00:00:00Z'), sem = new Date(d - ((d.getUTCDay() - wsd + 7) % 7) * 864e5).toISOString().slice(0, 10), k = r.codigo + '|' + sem + '|' + r.tipo, o = (m[k] ||= [r.codigo, sem, r.tipo, 0, 0]); o[3] += r.caras; if (r.grupo === 'CN') o[4] += r.caras; }); return Object.values(m); },
     share_pdv_sem: (a) => { const rt = Object.fromEntries(DB.rutero.map((r) => [r.codigo, r])), m = {}; const wsd = 3;

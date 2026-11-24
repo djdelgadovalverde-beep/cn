@@ -5,7 +5,7 @@
   const PESOS = [['w_vis', 'Efectividad de visitas', 20], ['w_tar', 'Efectividad de tareas', 30], ['w_frio', 'Tareas de equipo de frío', 30], ['w_sos', 'SOS · share de percha', 10], ['w_soe', 'SOE · share de espacios', 10]];
   const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const TABS = [['pesos', 'Pesos del puntaje'], ['metas', 'Metas'], ['semana', 'Semana y exclusiones'], ['frio', 'Tareas de equipo de frío'], ['analisis', 'Umbrales de análisis'], ['otros', 'Otros ajustes']];
-  const CONOCIDAS = new Set(['w_vis', 'w_tar', 'w_frio', 'w_sos', 'w_soe', 'meta_vis', 'meta_tar', 'meta_frio', 'meta_sos', 'meta_soe', 'score_vs_meta', 'semana_inicio', 'excluir_pdv', 'frio_regex', 'rei_min', 'dur_min', 'dias_antiguedad']);
+  const CONOCIDAS = new Set(['w_vis', 'w_tar', 'w_frio', 'w_sos', 'w_soe', 'meta_vis', 'meta_tar', 'meta_frio', 'meta_sos', 'meta_soe', 'score_vs_meta', 'semana_inicio', 'excluir_pdv', 'frio_regex', 'rei_min', 'dur_min', 'dias_antiguedad', 'pdv_semanas_inactivo']);
   const ST = { tab: 'pesos', mes: '' }; let C = {}, D = {}, PREV = {};
   const n = (k, d) => (D[k] == null || D[k] === '' ? d : Number(D[k]));
   const cambios = () => Object.keys(D).filter((k) => String(D[k]) !== String(C[k] ?? ''));
@@ -78,7 +78,7 @@
   }
   async function analisis() {
     return `<div class="card"><h3>Umbrales de análisis y auditoría</h3><div class="grid" style="margin-top:8px">
-      ${campoNum('rei_min', 'Fallas para ser reincidente', 'Clientes con esta cantidad o más de visitas/tareas no efectivas aparecen en Reincidencias.', 2, 1)}${campoNum('dur_min', 'Duración mínima de una visita (min)', 'Menos que esto se considera atención sin ejecución.', 2, 0)}${campoNum('dias_antiguedad', 'Días para considerar antigua una novedad', 'Pendientes sin justificar con más días se marcan como antiguas.', 15, 1)}</div></div>`;
+      ${campoNum('pdv_semanas_inactivo', 'Semanas sin datos para desactivar un PDV', 'Un PDV sin visitas, tareas, encuestas ni espacios ganados durante este número de semanas pasa a inactivo; si reaparecen datos, vuelve a activo.', 3, 1)}${campoNum('rei_min', 'Fallas para ser reincidente', 'Clientes con esta cantidad o más de visitas/tareas no efectivas aparecen en Reincidencias.', 2, 1)}${campoNum('dur_min', 'Duración mínima de una visita (min)', 'Menos que esto se considera atención sin ejecución.', 2, 0)}${campoNum('dias_antiguedad', 'Días para considerar antigua una novedad', 'Pendientes sin justificar con más días se marcan como antiguas.', 15, 1)}</div></div>`;
   }
   async function otros() {
     const R = Object.keys(D).filter((k) => !CONOCIDAS.has(k)).sort();
