@@ -62,6 +62,7 @@
   }
   const weekStart = (iso, wsd) => { const d = new Date(iso + 'T00:00:00Z'), o = (d.getUTCDay() - wsd + 7) % 7; d.setUTCDate(d.getUTCDate() - o); return d.toISOString().slice(0, 10); };
   const RPC = {
+    catalogo_aplicar: () => 0,
     pdv_recalcular_estado: () => ({ ok: true, desactivados: 2, reactivados: 1, corte: '2026-10-28', referencia: '2026-11-18', historial_suficiente: true, semanas: 3 }),
     admin_actividad: () => DB.profiles.map((p) => ({ usuario: p.id, ult_acceso: new Date().toISOString(), accesos: 3, dias_activos: 2, pantallas: 9, cambios: 1, ult_cambio: new Date().toISOString() })),
     plan_pdv_tipo: (a) => { const m = {}, wsd = 3; DB.share_detalle.filter((r) => r.fecha >= a.p_desde && r.fecha <= a.p_hasta && r.grupo !== 'EXCLUIR').forEach((r) => { const d = new Date(r.fecha + 'T00:00:00Z'), sem = new Date(d - ((d.getUTCDay() - wsd + 7) % 7) * 864e5).toISOString().slice(0, 10), k = r.codigo + '|' + sem + '|' + r.tipo, o = (m[k] ||= [r.codigo, sem, r.tipo, 0, 0]); o[3] += r.caras; if (r.grupo === 'CN') o[4] += r.caras; }); return Object.values(m); },
