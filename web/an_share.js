@@ -54,7 +54,7 @@
       <div class="card"><h3>Evolución del share CN · SOE (espacios)</h3>${line(ws.map(wl), [{ n: 'SOE CN', c: COL[2], d: A.map((x) => x.soe) }], { meta: me, ymax: 100, pct: true, tipfy: (v) => v.toFixed(1) + '%' })}</div></div>
       <div class="g2"><div class="card"><h3>Share de percha por grupo · última semana</h3>${stack([{ l: 'Percha', segs: GRP.map((g) => ({ v: u.p[g], c: GC[g], n: g })) }, ...ESP.map((t) => ({ l: t, segs: GRP.map((g) => ({ v: (u.t[t] || {})[g] || 0, c: GC[g], n: g })) }))])}${legend(GRP.map((g) => [g, GC[g]]))}</div>
       <div class="card"><h3>Share CN por tipo de espacio</h3>${hbar(tipos.filter((x) => x.v != null).map((x) => ({ l: x.t, v: x.v, t: f1(x.v), c: x.v >= me ? 'var(--cE)' : 'var(--cP)' })), { max: 100, meta: me })}</div></div>
-      <div class="card"><h3>Afectación al share CN · marcas CN que más suben y bajan vs semana anterior</h3><p class="note">Variación de la participación de cada marca CN en la percha (puntos porcentuales).</p>${dif.length ? hbar([...dif.slice(0, 6), ...dif.slice(-6)].filter((x, i, a) => a.findIndex((y) => y.k === x.k) === i).map((x) => ({ l: x.k, v: Math.abs(x.d), t: (x.d >= 0 ? '+' : '') + x.d.toFixed(2) + ' pp', c: x.d >= 0 ? 'var(--cE)' : 'var(--cP)' }))) : '<p class="note">Se necesitan al menos dos semanas con datos por marca.</p>'}</div>`;
+      <div class="card"><h3>Afectación al share CN · productos (SKU) CN que más suben y bajan vs semana anterior</h3><p class="note">Variación de la participación de cada producto (SKU) CN en la percha (puntos porcentuales).</p>${dif.length ? hbar([...dif.slice(0, 6), ...dif.slice(-6)].filter((x, i, a) => a.findIndex((y) => y.k === x.k) === i).map((x) => ({ l: x.k, v: Math.abs(x.d), t: (x.d >= 0 ? '+' : '') + x.d.toFixed(2) + ' pp', c: x.d >= 0 ? 'var(--cE)' : 'var(--cP)' }))) : '<p class="note">Se necesitan al menos dos semanas con datos por marca.</p>'}</div>`;
   }
   const vacio = () => '<div class="card"><h3>Aún no hay datos de SOS/SOE en este rango</h3><p>Carga el reporte de encuestas en «Cargar bases» o amplía las fechas.</p></div>';
 
@@ -72,16 +72,16 @@
   }
 
   async function marcas(nivel) {
-    const dim = nivel === 'sku' ? 'sku' : 'marca', rows = (await agg(dim)).filter((r) => r.tipo === 'PERCHA'), W = bySem(rows), ws = Object.keys(W).sort(); if (!ws.length) return vacio();
+    const dim = nivel === 'sku' ? 'marca' : 'grupo', rows = (await agg(dim)).filter((r) => r.tipo === 'PERCHA'), W = bySem(rows), ws = Object.keys(W).sort(); if (!ws.length) return vacio();
     const w1 = ws[ws.length - 1], tot = (W[w1] || []).reduce((a, r) => a + Number(r.caras), 0), prevTot = ws.length > 1 ? W[ws[ws.length - 2]].reduce((a, r) => a + Number(r.caras), 0) : 0;
-    const m = {}; (W[w1] || []).forEach((r) => { const o = (m[r.dim] ||= { g: r.grupo, c: 0, marca: r.marca }); o.c += Number(r.caras); });
+    const m = {}; (W[w1] || []).forEach((r) => { const o = (m[r.dim] ||= { g: r.grupo, c: 0 }); o.c += Number(r.caras); });
     const m0 = {}; ws.length > 1 && W[ws[ws.length - 2]].forEach((r) => { m0[r.dim] = (m0[r.dim] || 0) + Number(r.caras); });
     const L = Object.entries(m).map(([k, o]) => ({ k, ...o, sh: pc(o.c, tot), d: ws.length > 1 ? pc(o.c, tot) - pc(m0[k] || 0, prevTot) : null })).sort((a, b) => b.c - a.c);
     const top = L.slice(0, 6).map((x) => x.k), ser = top.map((k, i) => ({ n: k, c: COL[i], d: ws.map((w) => { const t = W[w].reduce((a, r) => a + Number(r.caras), 0), c = W[w].filter((r) => r.dim === k).reduce((a, r) => a + Number(r.caras), 0); return t ? (c / t) * 100 : null; }) }));
-    return `<div class="bar"><button data-snivel="marca" class="${nivel === 'marca' ? 'pri' : ''}">Por segmento / marca</button><button data-snivel="sku" class="${nivel === 'sku' ? 'pri' : ''}">Por producto (SKU)</button><span class="note">Participación en la percha · semana ${wl(w1)}.</span></div>
-      <div class="g2"><div class="card"><h3>Participación por ${nivel === 'sku' ? 'producto' : 'marca'} · ${fN(tot)} caras</h3>${hbar(L.slice(0, 15).map((x) => ({ l: x.k, v: x.sh, t: f1(x.sh), c: GC[x.g] || COL[0], tip: `${x.k} (${x.g})\n${fN(x.c)} caras · ${f1(x.sh)}` })), { max: Math.max(...L.slice(0, 15).map((x) => x.sh)) || 100 })}${legend(GRP.map((g) => [g, GC[g]]))}</div>
+    return `<div class="bar"><button data-snivel="marca" class="${nivel === 'marca' ? 'pri' : ''}">Por marca</button><button data-snivel="sku" class="${nivel === 'sku' ? 'pri' : ''}">Por producto (SKU)</button><span class="note">Participación en la percha · semana ${wl(w1)}.</span></div>
+      <div class="g2"><div class="card"><h3>Participación por ${nivel === 'sku' ? 'producto (SKU)' : 'marca'} · ${fN(tot)} caras</h3>${hbar(L.slice(0, 15).map((x) => ({ l: x.k, v: x.sh, t: f1(x.sh), c: GC[x.g] || COL[0], tip: `${x.k} (${x.g})\n${fN(x.c)} caras · ${f1(x.sh)}` })), { max: Math.max(...L.slice(0, 15).map((x) => x.sh)) || 100 })}${legend(GRP.map((g) => [g, GC[g]]))}</div>
       <div class="card"><h3>Evolución de las 6 principales</h3>${line(ws.map(wl), ser, { pct: true, tipfy: (v) => v.toFixed(1) + '%', aria: 'Participación por marca en el tiempo' })}</div></div>
-      <div class="card">${table([{ h: nivel === 'sku' ? 'Producto' : 'Marca' }, ...(nivel === 'sku' ? [{ h: 'Marca' }] : []), { h: 'Grupo' }, { h: 'Caras', n: 1 }, { h: 'Participación', n: 1 }, { h: 'vs sem. ant.', n: 1 }], L.map((x) => ({ c: [esc(x.k), ...(nivel === 'sku' ? [esc(x.marca)] : []), x.g, fN(x.c), f1(x.sh), delta(x.d == null ? null : x.sh, x.d == null ? null : x.sh - x.d)], s: [x.k, ...(nivel === 'sku' ? [x.marca] : []), x.g, x.c, x.sh, x.d ?? -999], x: [x.k, ...(nivel === 'sku' ? [x.marca] : []), x.g, x.c, +x.sh.toFixed(2)] })), { name: `participacion_${dim}`, max: 400 })}</div>`;
+      <div class="card">${table([{ h: nivel === 'sku' ? 'Producto (SKU)' : 'Marca' }, ...(nivel === 'sku' ? [{ h: 'Marca' }] : []), { h: 'Caras', n: 1 }, { h: 'Participación', n: 1 }, { h: 'vs sem. ant.', n: 1 }], L.map((x) => ({ c: [esc(x.k), ...(nivel === 'sku' ? [esc(x.g)] : []), fN(x.c), f1(x.sh), delta(x.d == null ? null : x.sh, x.d == null ? null : x.sh - x.d)], s: [x.k, ...(nivel === 'sku' ? [x.g] : []), x.c, x.sh, x.d ?? -999], x: [x.k, ...(nivel === 'sku' ? [x.g] : []), x.c, +x.sh.toFixed(2)] })), { name: `participacion_${dim}`, max: 400 })}</div>`;
   }
 
   async function pdv() {
@@ -146,7 +146,7 @@
   }
 
   /* ---------- hub ---------- */
-  const TABS = [['sem', 'Resumen semanal'], ['res', 'Evolución'], ['sos', 'SOS · percha'], ['soe', 'SOE · espacios'], ['mar', 'Segmentos y marcas'], ['sku', 'Productos (SKU)'], ['pdv', 'PDV'], ['bi', 'Análisis'], ['ale', 'Alertas'], ['det', 'Detalle editable']];
+  const TABS = [['sem', 'Resumen semanal'], ['res', 'Evolución'], ['sos', 'SOS · percha'], ['soe', 'SOE · espacios'], ['mar', 'Marcas'], ['sku', 'Productos (SKU)'], ['pdv', 'PDV'], ['bi', 'Análisis'], ['ale', 'Alertas'], ['det', 'Detalle editable']];
   let M = null;
   async function draw() {
     const o = await opciones();
