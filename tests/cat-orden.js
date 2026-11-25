@@ -9,4 +9,5 @@ const srv = http.createServer((req, res) => { const f = path.join(WEB, req.url.s
   const col = () => p.$$eval('#tb tbody tr td:first-child', (a) => a.slice(0, 4).map((x) => x.innerText.slice(0, 22)));
   console.log('Sin orden  :', await col()); await p.click('[data-o="pregunta"]'); await p.waitForTimeout(300); console.log('A→Z        :', await col(), await p.$eval('[data-o="pregunta"]', (e) => e.innerText));
   await p.click('[data-o="pregunta"]'); await p.waitForTimeout(300); console.log('Z→A        :', await col()); await p.click('[data-o="grupo"]'); await p.waitForTimeout(300); console.log('Por marca  :', await p.$$eval('#tb tbody tr td:nth-child(3) select', (a) => a.slice(0, 4).map((s) => s.value)));
+  await p.selectOption('#mf', 'HNK'); await p.waitForTimeout(300); console.log('Filtro marca HNK:', await p.$$eval('#tb tbody tr td:nth-child(3) select', (a) => a.map((x) => x.value)), await p.$eval('#info', (e) => e.innerText.slice(0, 14)));
   console.log('errores:', errs.length, errs.slice(0, 2)); await b.close(); srv.close(); })();

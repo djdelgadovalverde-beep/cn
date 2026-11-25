@@ -370,11 +370,11 @@
   VIEWS.catalogo = async function () {
     const m = $('#main');
     let ord = null; /* orden por encabezado: { k, dir } */
-    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="sin">Sin clasificar</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
+    m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Marca<select id="mf"><option value="">Todas</option>${GRUPOS_CAT.map((g) => `<option>${g}</option>`).join('')}</select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="sin">Sin clasificar</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
     const load = async () => {
       let rows = await fetchAll(() => sb.from('catalogo_share').select('*').order('clave'));
-      const en = $('#en').value, or = $('#or').value, q = norm($('#q').value);
-      rows = rows.filter((r) => (!en || r.encuesta === en) && (!or || (or === 'sin' ? r.grupo === 'SIN CLASIFICAR' : r.origen === or)) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
+      const en = $('#en').value, or = $('#or').value, mf = $('#mf').value, q = norm($('#q').value);
+      rows = rows.filter((r) => (!en || r.encuesta === en) && (!mf || r.grupo === mf) && (!or || (or === 'sin' ? r.grupo === 'SIN CLASIFICAR' : r.origen === or)) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
       const VK = { pregunta: (r) => norm(r.pregunta), encuesta: (r) => r.encuesta, grupo: (r) => r.grupo, tipo: (r) => r.tipo, marca: (r) => norm(r.marca || ''), origen: (r) => r.origen };
       if (ord) rows.sort((a, b) => ord.dir * String(VK[ord.k](a) ?? '').localeCompare(String(VK[ord.k](b) ?? ''), 'es', { numeric: true })); else rows.sort((a, b) => (b.grupo === 'SIN CLASIFICAR') - (a.grupo === 'SIN CLASIFICAR')); const nSin = rows.filter((r) => r.grupo === 'SIN CLASIFICAR').length;
       $('#info').textContent = `${rows.length} preguntas${nSin ? ` (${nSin} sin clasificar: elige su marca y vuelve a cargar la encuesta)` : ''}. Al cambiar la marca, el tipo o el SKU, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
@@ -383,7 +383,7 @@
       rows.slice(0, 300).forEach((r, i) => ['cg', 'ct', 'cs'].forEach((p) => { $('#' + p + i).onchange = async () => {
         const { error } = await sb.from('catalogo_share').update({ grupo: $('#cg' + i).value, tipo: $('#ct' + i).value, marca: $('#cs' + i).value.trim().slice(0, 80), origen: 'manual' }).eq('clave', r.clave).eq('encuesta', r.encuesta); error ? fail(error) : toast('Guardado'); }; }));
     };
-    ['en', 'or'].forEach((id) => $('#' + id).onchange = () => load().catch(fail)); let dt; $('#q').oninput = () => { clearTimeout(dt); dt = setTimeout(() => load().catch(fail), 350); };
+    ['en', 'or', 'mf'].forEach((id) => $('#' + id).onchange = () => load().catch(fail)); let dt; $('#q').oninput = () => { clearTimeout(dt); dt = setTimeout(() => load().catch(fail), 350); };
     await load();
   };
 })();
