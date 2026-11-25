@@ -1,0 +1,12 @@
+const { chromium } = require('playwright'); const fs = require('fs'), path = require('path'), http = require('http');
+const WEB = path.join(__dirname, '..', 'web');
+const srv = http.createServer((req, res) => { const f = path.join(WEB, req.url.split('?')[0] === '/' ? 'index.html' : req.url.split('?')[0]); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : f.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(fs.readFileSync(f)); });
+(async () => { await new Promise((r) => srv.listen(8799, r)); const b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 1400, height: 900 } })).newPage(), errs = [];
+  p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  await p.route('https://cdn.jsdelivr.net/**', (r) => { const u = r.request().url(); const S = (f) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(f) }); if (/supabase/.test(u)) return S(path.join(__dirname, 'fake.js')); if (/xlsx/.test(u)) return S(path.join(__dirname, '..', 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js')); r.abort(); });
+  await p.goto('http://localhost:8799/#catalogo'); await p.waitForSelector('#tb table');
+  await p.evaluate(() => { window.__DB.catalogo_share = ['PILSENER', 'CLUB', 'HEINEKEN', 'AMSTEL', 'PERONI'].map((m, i) => ({ clave: m, pregunta: 'Cuantas caras de ' + m, encuesta: i % 2 ? 'SOE' : 'SOS', grupo: ['CN', 'HNK', 'MERC'][i % 3], tipo: 'PERCHA', marca: m, visual: m, origen: 'auto' })); }); await p.selectOption('#en', ''); await p.click('[data-o="origen"]'); await p.click('[data-o="origen"]'); await p.waitForTimeout(300);
+  const col = () => p.$$eval('#tb tbody tr td:first-child', (a) => a.slice(0, 4).map((x) => x.innerText.slice(0, 22)));
+  console.log('Sin orden  :', await col()); await p.click('[data-o="pregunta"]'); await p.waitForTimeout(300); console.log('A→Z        :', await col(), await p.$eval('[data-o="pregunta"]', (e) => e.innerText));
+  await p.click('[data-o="pregunta"]'); await p.waitForTimeout(300); console.log('Z→A        :', await col()); await p.click('[data-o="grupo"]'); await p.waitForTimeout(300); console.log('Por marca  :', await p.$$eval('#tb tbody tr td:nth-child(3) select', (a) => a.slice(0, 4).map((s) => s.value)));
+  console.log('errores:', errs.length, errs.slice(0, 2)); await b.close(); srv.close(); })();

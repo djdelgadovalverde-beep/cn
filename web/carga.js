@@ -124,9 +124,9 @@
 
   /* ---------- mapeo visitas / tareas ---------- */
   function mapVis(rows, A) {
-    const seen = {}; let desc = 0;
+    const seen = {}; let desc = 0; const fixF = CN.mapaFechas(rows.map((r) => toISO(g(r, 'VISIT_DATE'))));
     const out = rows.map((r) => {
-      const fecha = toISO(g(r, 'VISIT_DATE')); const prog = Number(g(r, 'VISITAS PROGRAMADAS')) || 0;
+      const fecha = fixF(toISO(g(r, 'VISIT_DATE'))); const prog = Number(g(r, 'VISITAS PROGRAMADAS')) || 0;
       if (!fecha || prog <= 0) { desc++; return null; }
       const bdr = TXT(g(r, 'BDR')), ecm = ecmNorm(bdr), cli = TXT(g(r, 'CodigoCliente'));
       const ef = Number(g(r, 'VISITAS EFECTIVAS')) || 0, pe = Number(g(r, 'VISITAS PERDIDAS')) || 0, rango = Number(g(r, 'EN RANGO')) === 1;
@@ -141,9 +141,9 @@
     return { data: out, desc };
   }
   function mapTar(rows, A, re, regCli) {
-    const seen = {}; let desc = 0;
+    const seen = {}; let desc = 0; const fixF = CN.mapaFechas(rows.map((r) => toISO(g(r, 'SystemModstamp'))));
     const out = rows.map((r) => {
-      const ts = g(r, 'SystemModstamp'); const fecha = toISO(ts); const bdr = TXT(g(r, 'SectorDesarrollo')), ecm = ecmNorm(bdr), cli = TXT(g(r, 'CodigoCliente'));
+      const ts = g(r, 'SystemModstamp'); const fecha = fixF(toISO(ts)); const bdr = TXT(g(r, 'SectorDesarrollo')), ecm = ecmNorm(bdr), cli = TXT(g(r, 'CodigoCliente'));
       if (!fecha || !cli || !ecm) { desc++; return null; }
       const st = norm(g(r, 'Estado_Tarea')), res = norm(g(r, 'ResultadoEfectividad_Tarea'));
       const categoria = res === 'VALID' && st === 'FINISHED' ? 'E' : res === 'INVALID' && st === 'FINISHED' ? 'M' : st === 'JUSTIFIED' ? 'F' : st === 'AVAILABLE' ? 'P' : st === 'FINISHED' ? 'M' : 'P';

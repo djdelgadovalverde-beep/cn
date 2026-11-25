@@ -52,12 +52,12 @@
     const wsd = Number(S.cfg.semana_inicio ?? 3);
     const excl = new Set(String(S.cfg.excluir_pdv || '').split(/[,\s;]+/).filter(Boolean));
     const st = { total: rows.length, fueraDia: 0, sinFecha: 0, excluidos: 0, anteriores: 0, sinValor: 0, sinTipo: 0 };
-    const recs = [], maxD = {};
+    const recs = [], maxD = {}, fixF = CN.mapaFechas(rows.map((r) => toISO(g(r, 'Fecha Encuesta'))));
     rows.forEach((r) => {
       const cod = TXT(g(r, 'CodigoCliente')).replace(/\.0+$/, ''), q = TXT(g(r, 'DescripcionPregunta'));
       if (!q) return;
       const sv = surveyOfRow(g(r, 'NombreEncuesta'), q); if (!sv) { st.sinTipo++; return; }
-      const f = toISO(g(r, 'Fecha Encuesta')); if (!f || !/^\d+$/.test(cod)) { st.sinFecha++; return; }
+      const f = fixF(toISO(g(r, 'Fecha Encuesta'))); if (!f || !/^\d+$/.test(cod)) { st.sinFecha++; return; }
       if (excl.has(cod)) { st.excluidos++; return; }
       const w = opStart(f, wsd); if (wsd === 3 && w.opDay > 4) { st.fueraDia++; return; }
       const k = `${sv}|${cod}|${w.start}`; if (!maxD[k] || f > maxD[k]) maxD[k] = f;
@@ -161,10 +161,10 @@
     if (col.codigo < 0 || col.fecha < 0) throw new Error('No encontré «Perfil del PDV» y «Fecha y hora de la encuesta». Usa el reporte «Respuestas de encuestas».');
     if (col.percha < 0 && col.frio < 0 && col.seco < 0 && col.ruma < 0) throw new Error('No encontré columnas de caras o rumas ganadas');
     const v = (r, j) => (j < 0 || r[j] == null ? '' : r[j]);
-    const nuevos = {}; let sinFecha = 0, sinCodigo = 0;
+    const nuevos = {}; let sinFecha = 0, sinCodigo = 0; const fixG = CN.mapaFechas(data.slice(1).map((r) => { const d0 = ganFecha(v(r, col.fecha)); return d0 && d0.f; }));
     data.slice(1).forEach((r) => {
       const cod = TXT(v(r, col.codigo)).replace(/\.0+$/, ''); if (!/^\d{1,12}$/.test(cod)) { sinCodigo++; return; }
-      const d = ganFecha(v(r, col.fecha)); if (!d) { sinFecha++; return; }
+      const d = ganFecha(v(r, col.fecha)); if (!d) { sinFecha++; return; } d.f = fixG(d.f);
       const ecm = ecmNorm(v(r, col.ecm));
       const o = { fecha: d.f, hora: d.h, codigo: cod, pdv: TXT(v(r, col.pdv)).slice(0, 100), cadena: TXT(v(r, col.cadena)).slice(0, 60), ecm, supervisor: supDeEcm(ecm, ''),
         percha: num(v(r, col.percha)), frio: num(v(r, col.frio)), seco: num(v(r, col.seco)), ruma: num(v(r, col.ruma)),
@@ -369,14 +369,17 @@
   /* ======================= Catálogo de marcas ======================= */
   VIEWS.catalogo = async function () {
     const m = $('#main');
+    let ord = null; /* orden por encabezado: { k, dir } */
     m.innerHTML = `<div class="bar"><label>Encuesta<select id="en"><option value="">Todas</option><option>SOS</option><option>SOE</option></select></label><label>Origen<select id="or"><option value="">Todos</option><option value="auto">Por revisar (auto)</option><option value="sin">Sin clasificar</option><option value="manual">Manual</option></select></label><label>Buscar pregunta, SKU o producto<input id="q"></label></div><div class="card"><div class="tw" id="tb"></div><p class="note" id="info"></p></div>`;
     const load = async () => {
       let rows = await fetchAll(() => sb.from('catalogo_share').select('*').order('clave'));
       const en = $('#en').value, or = $('#or').value, q = norm($('#q').value);
       rows = rows.filter((r) => (!en || r.encuesta === en) && (!or || (or === 'sin' ? r.grupo === 'SIN CLASIFICAR' : r.origen === or)) && (!q || norm(r.pregunta + ' ' + (r.marca || '')).includes(q)));
-      rows.sort((a, b) => (b.grupo === 'SIN CLASIFICAR') - (a.grupo === 'SIN CLASIFICAR')); const nSin = rows.filter((r) => r.grupo === 'SIN CLASIFICAR').length;
+      const VK = { pregunta: (r) => norm(r.pregunta), encuesta: (r) => r.encuesta, grupo: (r) => r.grupo, tipo: (r) => r.tipo, marca: (r) => norm(r.marca || ''), origen: (r) => r.origen };
+      if (ord) rows.sort((a, b) => ord.dir * String(VK[ord.k](a) ?? '').localeCompare(String(VK[ord.k](b) ?? ''), 'es', { numeric: true })); else rows.sort((a, b) => (b.grupo === 'SIN CLASIFICAR') - (a.grupo === 'SIN CLASIFICAR')); const nSin = rows.filter((r) => r.grupo === 'SIN CLASIFICAR').length;
       $('#info').textContent = `${rows.length} preguntas${nSin ? ` (${nSin} sin clasificar: elige su marca y vuelve a cargar la encuesta)` : ''}. Al cambiar la marca, el tipo o el SKU, vuelve a cargar la encuesta de esas semanas para aplicar el cambio.`;
-      $('#tb').innerHTML = `<table><thead><tr><th>Pregunta</th><th>Enc.</th><th>Marca</th><th>Tipo</th><th>SKU / producto</th><th>Origen</th></tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${sel('cg' + i, GRUPOS_CAT, r.grupo, `data-k="${esc(r.clave)}" aria-label="Marca de ${esc(r.pregunta)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}" aria-label="Tipo de ${esc(r.pregunta)}"`)}</td><td><input id="cs${i}" value="${esc(r.marca || '')}" maxlength="80" style="min-width:180px" aria-label="SKU o producto de ${esc(r.pregunta)}"></td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
+      $('#tb').innerHTML = `<table><thead><tr>${[['pregunta', 'Pregunta'], ['encuesta', 'Enc.'], ['grupo', 'Marca'], ['tipo', 'Tipo'], ['marca', 'SKU / producto'], ['origen', 'Origen']].map(([k, t]) => `<th aria-sort="${ord && ord.k === k ? (ord.dir > 0 ? 'ascending' : 'descending') : 'none'}"><button type="button" class="th-sort" data-o="${k}" title="Ordenar por ${t}">${t} ${ord && ord.k === k ? (ord.dir > 0 ? '▲' : '▼') : '↕'}</button></th>`).join('')}</tr></thead><tbody>${rows.slice(0, 300).map((r, i) => `<tr><td style="white-space:normal;min-width:260px">${esc(r.pregunta)}</td><td>${r.encuesta}</td><td>${sel('cg' + i, GRUPOS_CAT, r.grupo, `data-k="${esc(r.clave)}" aria-label="Marca de ${esc(r.pregunta)}"`)}</td><td>${sel('ct' + i, TIPOS, r.tipo, `data-k="${esc(r.clave)}" aria-label="Tipo de ${esc(r.pregunta)}"`)}</td><td><input id="cs${i}" value="${esc(r.marca || '')}" maxlength="80" style="min-width:180px" aria-label="SKU o producto de ${esc(r.pregunta)}"></td><td><span class="pill ${r.origen === 'auto' ? 'F' : 'E'}">${r.origen}</span></td></tr>`).join('')}</tbody></table>`;
+      document.querySelectorAll('#tb [data-o]').forEach((b) => (b.onclick = () => { ord = ord && ord.k === b.dataset.o ? (ord.dir > 0 ? { k: ord.k, dir: -1 } : null) : { k: b.dataset.o, dir: 1 }; load().catch(fail); }));
       rows.slice(0, 300).forEach((r, i) => ['cg', 'ct', 'cs'].forEach((p) => { $('#' + p + i).onchange = async () => {
         const { error } = await sb.from('catalogo_share').update({ grupo: $('#cg' + i).value, tipo: $('#ct' + i).value, marca: $('#cs' + i).value.trim().slice(0, 80), origen: 'manual' }).eq('clave', r.clave).eq('encuesta', r.encuesta); error ? fail(error) : toast('Guardado'); }; }));
     };

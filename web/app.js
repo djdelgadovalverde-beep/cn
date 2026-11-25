@@ -304,6 +304,14 @@ function detalleShare(rows, info) {
 
 /* ---------- Carga de bases (gerencia / admin) ---------- */
 const hash = (s) => { let h = 5381; for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
+/* Excel en configuración de EE. UU. deja los días 1–12 como fechas con día y mes intercambiados (12/11 → 11-dic) y los días 13+ como texto.
+   Con las fechas «firmes» del archivo (día > 12) se sabe en qué rango están los datos: si una fecha ambigua cae fuera de ese rango y al
+   intercambiar día y mes cae dentro, se corrige. Devuelve la función que arregla cada fecha ISO. */
+CN.mapaFechas = (isos) => {
+  const firmes = isos.filter((x) => x && +x.slice(8) > 12).sort(); if (firmes.length < 5) return (x) => x;
+  const t = (x) => Date.parse(x + 'T00:00:00Z'), lo = t(firmes[0]) - 10 * 864e5, hi = t(firmes[firmes.length - 1]) + 10 * 864e5, dentro = (x) => t(x) >= lo && t(x) <= hi;
+  return (x) => { if (!x) return x; const dd = +x.slice(8), mm = +x.slice(5, 7); if (dd > 12 || dd === mm) return x; const s = `${x.slice(0, 4)}-${String(dd).padStart(2, '0')}-${x.slice(5, 7)}`; return !dentro(x) && dentro(s) ? s : x; };
+};
 /* número de serie de Excel (p. ej. 46327 = 2026-11-01) → milisegundos en hora local de pared, o NaN si no parece una fecha */
 const serialMs = (v) => (typeof v === 'number' && v > 30000 && v < 80000 ? Math.round((v - 25569) * 86400000) : NaN);
 function toISO(v) {
