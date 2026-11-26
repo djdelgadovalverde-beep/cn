@@ -1,0 +1,11 @@
+const { chromium } = require('playwright'); const fs = require('fs'), path = require('path'), http = require('http');
+const WEB = path.join(__dirname, '..', 'web');
+const srv = http.createServer((req, res) => { const f = path.join(WEB, req.url.split('?')[0] === '/' ? 'index.html' : req.url.split('?')[0]); if (!fs.existsSync(f)) { res.writeHead(404); return res.end(); } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : f.endsWith('.css') ? 'text/css' : 'text/html' }); res.end(fs.readFileSync(f)); });
+(async () => { await new Promise((r) => srv.listen(8802, r)); const b = await chromium.launch(), p = await (await b.newContext({ viewport: { width: 1600, height: 1000 } })).newPage(), errs = [];
+  p.on('pageerror', (e) => errs.push(e.message)); p.on('console', (m) => { if (m.type() === 'error') errs.push(m.text()); });
+  await p.route('https://cdn.jsdelivr.net/**', (r) => { const u = r.request().url(); const S = (f) => r.fulfill({ contentType: 'application/javascript', body: fs.readFileSync(f) }); if (/supabase/.test(u)) return S(path.join(__dirname, 'fake.js')); if (/xlsx/.test(u)) return S(path.join(__dirname, '..', 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js')); r.abort(); });
+  await p.goto('http://localhost:8802/#precios'); await p.waitForSelector('#nav [data-sub^="precios|"]', { timeout: 15000 }); console.log('Pestañas:', (await p.$$eval('#nav [data-sub^="precios|"]', (a) => a.map((x) => x.innerText))).join(' | '));
+  await p.waitForSelector('table.pm'); console.log('KPIs:', (await p.$eval('.kp', (e) => e.innerText.replace(/\n/g, ' '))).slice(0, 200)); console.log('Matriz: SKU', await p.$$eval('table.pm tbody tr', (a) => a.length), '· columnas', await p.$$eval('table.pm thead tr:nth-child(2) th', (a) => a.length));
+  await p.screenshot({ path: path.join(__dirname, 'precios-ctrl.png') });
+  for (const t of ['ana', 'comp', 'aud', 'sku', 'ase']) { await p.click(`[data-sub="precios|${t}"]`); await p.waitForTimeout(900); const tx = await p.$eval('#main', (e) => e.innerText.replace(/\n/g, ' ')); console.log(t, '→', tx.length, 'car.', tx.slice(0, 110)); if (t === 'ana' || t === 'ase') await p.screenshot({ path: path.join(__dirname, `precios-${t}.png`) }); }
+  console.log('errores:', errs.length, errs.slice(0, 3)); await b.close(); srv.close(); })();

@@ -23,7 +23,7 @@
     return out;
   };
 
-  const NOMBRE = { vis: 'Visitas', tar: 'Tareas', rut: 'Rutero', ecm: 'ECM → supervisor', enl: 'Enlaces de fotos (Involves)', gan: 'Espacios ganados', enc: 'Encuestas SOS / SOE', meta: 'Metas', pdv: 'PDV activos / inactivos' };
+  const NOMBRE = { vis: 'Visitas', tar: 'Tareas', rut: 'Rutero', ecm: 'ECM → supervisor', enl: 'Enlaces de fotos (Involves)', gan: 'Espacios ganados', enc: 'Encuestas SOS / SOE', meta: 'Metas', pdv: 'PDV activos / inactivos', pre: 'Precios del mes', pro: 'Plan promocional de precios', chk: 'Check-in de asesores' };
   const CATL = { vis: { P: 'Perdida', F: 'Fuera de rango', M: 'Menos de 2 min' }, tar: { M: 'Mal ejecutada', F: 'Justificada', P: 'Abierta' } };
   CN.CATL = CATL;
   const normReg = (v) => norm(v).replace(/^REGION\s+/, '').replace(/\s*KKAA.*$/, '');
@@ -60,6 +60,9 @@
   /* ---------- detección del tipo de archivo (por encabezados) ---------- */
   function detectar(keys) {
     const has = (k) => keys.includes(k), any = (re) => keys.some((k) => re.test(k));
+    if (any(/^QUEPRECIOTIENE/) && has('CADENA') && has('PDV')) return 'pre';
+    if (has('FECHA') && has('AHORA') && has('PROMOCIONAL')) return 'pro';
+    if (has('EMPLEADO') && has('TIPODECHECKIN') && has('HORADEENTRADA')) return 'chk';
     if (has('VISITDATE')) return 'vis';
     if (has('ESTADOTAREA')) return 'tar';
     if (has('PERFILDELPDV') && has('EMPLEADO')) return any(/CARASGANADAS|RUMASGANADAS/) ? 'gan' : 'enl';
@@ -98,9 +101,9 @@
       const cel = (v) => (v instanceof Date && v.getTime() < -2203891200000 ? Math.round(v.getTime() / 864e5 + 25569) : v);
       const rows = j.map((r) => { const o = {}; orig.forEach((k) => (o[key(k)] = cel(r[k]))); return o; });
       if (tp === 'tar' && kk.URLLINK) hipervinculos(ws, j, kk.URLLINK, rows);
-      return { tp, rows, keys, file: f };
+      return { tp, rows, keys, orig, file: f };
     }
-    throw new Error('No reconozco el archivo. Debe ser: visitas (VISIT_DATE), tareas (Estado_Tarea), rutero, ECM (ECM y TELEFONO), enlaces o espacios ganados (Perfil del PDV y Empleado), encuestas (DescripcionPregunta y Respuesta) o metas.');
+    throw new Error('No reconozco el archivo. Debe ser: visitas (VISIT_DATE), tareas (Estado_Tarea), rutero, ECM (ECM y TELEFONO), enlaces o espacios ganados (Perfil del PDV y Empleado), encuestas (DescripcionPregunta y Respuesta), metas, precios del mes (¿Que precio tiene …?), plan promocional (FECHA, AHORA, PROMOCIONAL) o check-in (Empleado, Tipo de check-in, Hora de entrada).');
   }
   /* las tareas traen el link como hipervínculo de la celda: se toma su destino si el texto no es una URL */
   function hipervinculos(ws, j, header, rows) {
@@ -218,7 +221,7 @@
       nuevo[cod] = { codigo: cod, pdv: first(r, ['PDV', 'NOMBRE PDV', 'NombreCliente3', 'NOMBRE DEL PDV', 'NOMBRE']).slice(0, 120), region: normReg(regRaw), cadena: first(r, ['CADENA']),
         ciudad: first(r, ['CIUDAD']), supervisor: first(r, ['SUPERVISOR']), ecm: ecmNorm(first(r, ['ECM', 'SectorDesarrollo'])), dia_visita: first(r, ['DIA DE VISITA', 'DiaVisitaBDR']),
         subcadena: first(r, ['SUBCADENA', 'TIPOLOGIA']), kam: first(r, ['KAM']), gerencia: first(r, ['GrupoGerencia']), grupo_supervision: first(r, ['GrupoSupervision']),
-        semanas: first(r, ['SemanasVisita']), dia_entrega: first(r, ['Dia Entrega']), agrupacion: first(r, ['AGRUPACION']), gestor: first(r, ['GESTOR']) };
+        sub_cadena: (CN.subDe && CN.subDe(first(r, ['CADENA']), first(r, ['PDV', 'NOMBRE PDV', 'NombreCliente3', 'NOMBRE DEL PDV', 'NOMBRE']))) || '', grupo_cadena: (CN.grupoDe && CN.grupoDe(first(r, ['CADENA']), first(r, ['PDV', 'NOMBRE PDV', 'NombreCliente3', 'NOMBRE DEL PDV', 'NOMBRE']))) || '', semanas: first(r, ['SemanasVisita']), dia_entrega: first(r, ['Dia Entrega']), agrupacion: first(r, ['AGRUPACION']), gestor: first(r, ['GESTOR']) };
       const ev = norm(first(r, ['ESTADO PDV', 'ESTADO DEL PDV', 'ACTIVO', 'ESTADO', 'STATUS'])); if (ev) { if (/^(INACTIVO|INACTIVE|NO|0|FALSE|BAJA|CERRADO|DESACTIVADO)$/.test(ev)) estCol[cod] = false; else if (/^(ACTIVO|ACTIVE|SI|1|TRUE|ALTA|ACTIVADO)$/.test(ev)) estCol[cod] = true; }
     });
     const cods = Object.keys(nuevo); if (!cods.length) throw new Error('No encontré filas válidas en el rutero (el código debe ser numérico).');
@@ -349,7 +352,7 @@
     const modo = ($('#cmod') || {}).value || 'actualizar'; const go = $('#go'), msg = $('#msg'), say = (t) => (msg.textContent = t);
     if (modo === 'todo' && !confirm('Se borrará toda la base actual de visitas/tareas cargadas y se reemplazará. Las justificaciones se conservan. ¿Continuar?')) return;
     go.disabled = true; RES = []; ERRCARGA = null; let paso = '';
-    const L = CARGA.filter((c) => !c.err), orden = ['ecm', 'rut', 'vis', 'tar', 'enl', 'gan', 'enc', 'meta'];
+    const L = CARGA.filter((c) => !c.err), orden = ['ecm', 'rut', 'vis', 'tar', 'enl', 'gan', 'enc', 'meta', 'pre', 'pro', 'chk'];
     try {
       const cfg = (await sb.from('config').select('*')).data || []; S.cfg = Object.fromEntries(cfg.map((r) => [r.clave, r.valor]));
       let A = await apoyo();
@@ -366,6 +369,7 @@
         }
         else if (tp === 'enl') r = await cargarEnlaces(c.rows, say);
         else if (tp === 'gan' || tp === 'enc') { const o = document.createElement('div'); await (tp === 'gan' ? CARGAS.ganancias : CARGAS.encuesta).run(c.file, o); r = { tp, node: o, filas: null }; }
+        else if (tp === 'pre' || tp === 'pro' || tp === 'chk') { if (!CN.cargarPrecios) throw new Error('El módulo de precios no está disponible.'); r = await CN.cargarPrecios(tp, c.rows, c.orig, say); }
         else if (tp === 'meta') { if (!window.CN.cargarMetas) throw new Error('El módulo de metas no está disponible.'); r = await window.CN.cargarMetas(c.rows, say); }
         RES.push(r); if (r.estadoTxt) { const o = document.createElement('div'); o.textContent = r.estadoTxt; RES.push({ tp: 'pdv', node: o, filas: null }); }
         await sb.from('cargas').insert({ tipo: tp === 'enc' ? 'enc' : tp, modo: tp === 'vis' || tp === 'tar' ? modo : null, archivo: c.file.name.slice(0, 200), filas: r.filas || null, nuevas: r.nuevas || null, actualizadas: r.actualizadas || null, iguales: r.iguales || null, borradas: r.borradas || null, detalle: { trans: r.trans || null, motivoEfectivas: r.motivoEfectivas || null } });

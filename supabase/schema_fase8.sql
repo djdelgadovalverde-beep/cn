@@ -1,0 +1,3 @@
+-- Módulo Precios: tablas precios_enc, precios_obs, precios_promo, precios_marcas, precios_checkin;
+-- funciones precios_fechas, precios_celdas, precios_saltos, precios_aud; rutero.sub_cadena y rutero.grupo_cadena
+-- (sub_cadena_de / grupo_cadena_de). Se aplicó como migraciones «modulo_precios», «precios_auditoria» y «rutero_cadena_subcadena».
