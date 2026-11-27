@@ -43,13 +43,15 @@ CN.sinOff = (rows) => (CN.ecmInact && CN.ecmInact.size ? rows.filter((x) => !CN.
 async function boot() {
   const { data } = await sb.auth.getSession();
   if (!data.session) return loginView();
-  const { data: p, error } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single();
+  /* todo lo que necesita el arranque se pide a la vez (antes eran tres viajes seguidos a la base) */
+  const [pr, rl, cf, mo, em] = await Promise.all([sb.from('profiles').select('*').eq('id', data.session.user.id).single(), sb.from('roles').select('*'), sb.from('config').select('*'), sb.from('motivos').select('*').eq('activo', true).order('motivo'), sb.from('ecm_map').select('*')]);
+  const p = pr.data, error = pr.error;
   if (error || !p || !p.activo) { await sb.auth.signOut(); return loginView('Tu usuario no está activo. Contacta al administrador.'); }
   S.me = p;
   /* tipo de usuario: el rol BASE define el alcance de los datos; el tipo define qué ve y qué edita */
-  const { data: rls } = await sb.from('roles').select('*'); S.roles = rls || []; const def = S.roles.find((r) => r.clave === p.rol) || { clave: p.rol, nombre: ROL_TXT[p.rol] || p.rol, base: p.rol, ver: null, editar: null };
+  const rls = rl.data; S.roles = rls || []; const def = S.roles.find((r) => r.clave === p.rol) || { clave: p.rol, nombre: ROL_TXT[p.rol] || p.rol, base: p.rol, ver: null, editar: null };
   S.me.perfil = p.rol; S.me.perfilNombre = def.nombre; S.me.def = def; S.me.rol = def.base;
-  const [c, m, e] = await Promise.all([sb.from('config').select('*'), sb.from('motivos').select('*').eq('activo', true).order('motivo'), sb.from('ecm_map').select('*')]);
+  const c = cf, m = mo, e = em;
   S.cfg = Object.fromEntries((c.data || []).map((r) => [r.clave, r.valor]));
   S.motivos = m.data || []; S.ecmMap = e.data || []; CN.ecmSync();
   shell();
@@ -134,7 +136,7 @@ function shell() {
     if (u) { const [k, t] = u.dataset.sub.split('|'); if (curKey() === k && CN.sub[k]) { CN.sub[k].set(t); } else { CN.pendingTab = [k, t]; location.hash = '#' + k; } close(); }
   });
   window.onhashchange = route; route();
-  sb.rpc('estado_datos').then(({ data }) => { if (!data) return; const f = (o) => (o && o.hasta ? o.hasta : '—'); const el = $('#fresh'); if (el) el.textContent = `Datos hasta · visitas ${f(data.vis)} · tareas ${f(data.tar)} · SOS/SOE ${f(data.share)}`; });
+  sb.rpc('estado_datos_ligero').then(({ data }) => { if (!data) return; const f = (o) => (o && o.hasta ? o.hasta : '—'); const el = $('#fresh'); if (el) el.textContent = `Datos hasta · visitas ${f(data.vis)} · tareas ${f(data.tar)} · SOS/SOE ${f(data.share)}`; });
 }
 /* pantallas anchas (Asignar motivos): el menú lateral se oculta solo y se restaura al salir */
 function panelAuto(k) {

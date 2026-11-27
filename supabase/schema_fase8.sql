@@ -4,3 +4,8 @@
 -- Rendimiento (nov-2026): share_agg, share_pdv_sem y plan_pdv_tipo excluyen ECM inactivos con un arreglo calculado una vez (w.ein)
 -- en lugar de un NOT EXISTS por fila; score_ecm excluye PDV inactivos con <> all(array). Migraciones «share_ecm_inactivos_rapido»
 -- y «score_ecm_pdv_inactivos_rapido». share_agg bajó de ~10,5 s a ~1,3 s.
+-- Conectividad (nov-2026): estado_datos_ligero() para el encabezado; estado_datos() security definer (sin RLS por fila);
+-- share_opts() desde ecm_map; vt_opts() y pdv_recalcular_estado() sin recorrer todo; políticas RLS con (select ...);
+-- se quitaron los índices sin uso y los disparadores de historial de share_detalle y ganancias (cargas masivas);
+-- bitácora: solo 2 días (disparador bit_purga + pg_cron si existe). Migraciones: rendimiento_conexiones, estado_datos_sin_rls,
+-- bitacora_sin_cargas_masivas, bitacora_solo_2_dias.

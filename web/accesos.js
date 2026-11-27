@@ -45,7 +45,7 @@
     const [{ P }, r] = await Promise.all([datos(), sb.from('bitacora').select('*').gte('fecha', desde()).order('fecha', { ascending: false }).limit(1000)]);
     if (r.error) throw r.error; const L = (r.data || []).map((b) => ({ b, i: CN.bitInfo(b) }));
     return `<div class="bar"><span class="note">${fN(L.length)} cambios${L.length >= 1000 ? ' (los 1.000 más recientes)' : ''} en los últimos ${ST.dias} días</span></div>
-      <div class="card"><h3>Movimiento: qué cambió y quién lo hizo</h3>${table([{ h: 'Fecha' }, { h: 'Quién' }, { h: 'Qué hizo' }, { h: 'Dónde' }, { h: 'Detalle' }],
+      <div class="card"><h3>Movimiento: qué cambió y quién lo hizo</h3><p class="note">La bitácora guarda solo los últimos 2 días; los cambios más antiguos no aparecen aquí.</p>${table([{ h: 'Fecha' }, { h: 'Quién' }, { h: 'Qué hizo' }, { h: 'Dónde' }, { h: 'Detalle' }],
         L.map(({ b, i }) => ({ c: [`<span style="white-space:nowrap">${fx(b.fecha)}</span>`, esc(b.usuario && P[b.usuario] ? nom(P, b.usuario) : '—'), `<span class="acc ${i.tono}">${esc(i.acc)}</span>`, esc(i.donde), i.det], s: [b.fecha, b.usuario && P[b.usuario] ? nom(P, b.usuario) : '', i.acc, i.donde, plano(i.det)] })), { name: 'movimiento' })}</div>`;
   }
 
