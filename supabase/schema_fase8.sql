@@ -1,3 +1,6 @@
 -- Módulo Precios: tablas precios_enc, precios_obs, precios_promo, precios_marcas, precios_checkin;
 -- funciones precios_fechas, precios_celdas, precios_saltos, precios_aud; rutero.sub_cadena y rutero.grupo_cadena
 -- (sub_cadena_de / grupo_cadena_de). Se aplicó como migraciones «modulo_precios», «precios_auditoria» y «rutero_cadena_subcadena».
+-- Rendimiento (nov-2026): share_agg, share_pdv_sem y plan_pdv_tipo excluyen ECM inactivos con un arreglo calculado una vez (w.ein)
+-- en lugar de un NOT EXISTS por fila; score_ecm excluye PDV inactivos con <> all(array). Migraciones «share_ecm_inactivos_rapido»
+-- y «score_ecm_pdv_inactivos_rapido». share_agg bajó de ~10,5 s a ~1,3 s.
